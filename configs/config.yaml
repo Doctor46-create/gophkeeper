@@ -1,0 +1,8 @@
+address: ":8080"
+secret_key: "guess_whos_back"
+log_level: "info"
+database_dsn: ""
+database:
+  max_conns: 25
+  min_conns: 5
+  max_conn_lifetime: 3600
