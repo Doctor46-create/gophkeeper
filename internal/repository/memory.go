@@ -27,7 +27,7 @@ func (s *MemoryStorage) Close() error {
 
 func (s *MemoryStorage) RunInTransaction(ctx context.Context, fn func(ctx context.Context) error) error{
 	s.mu.Lock()
-	defer s.mu.Lock()
+	defer s.mu.Unlock()
 
 	select {
 	case <- ctx.Done():
@@ -39,8 +39,8 @@ func (s *MemoryStorage) RunInTransaction(ctx context.Context, fn func(ctx contex
 }
 
 func (s *MemoryStorage) CreateUser(ctx context.Context, login, hash string) error {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if _, ok := s.users[login]; ok {
 		return domain.ErrUserExists
 	}
@@ -118,7 +118,7 @@ func (s * MemoryStorage) GetData (ctx context.Context, login string) ([]domain.S
 
 func (s * MemoryStorage) DeleteData(ctx context.Context, login, id string) error {
 	s.mu.Lock()
-	defer s.mu.Lock()
+	defer s.mu.Unlock()
 
 
 	items := s.userSecrets[login]

@@ -7,7 +7,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/Doctor46-create/gophkeeper/internal/logger"
-	"github.com/Doctor46-create/gophkeeper/internal/utils"
 )
 
 var (
@@ -28,26 +27,26 @@ func (l *SafeQueryLogger) TraceQueryStart(
 	conn *pgx.Conn,
 	data pgx.TraceQueryStartData,
 ) context.Context {
-	ctx = context.WithValue(ctx, utils.QueryStartTimeKey, time.Now())
-	ctx = context.WithValue(ctx, utils.QuerySQLKey, data.SQL)
-	ctx = context.WithValue(ctx, utils.QueryArgsKey, data.Args)
+	ctx = context.WithValue(ctx, QueryStartTimeKey, time.Now())
+	ctx = context.WithValue(ctx, QuerySQLKey, data.SQL)
+	ctx = context.WithValue(ctx, QueryArgsKey, data.Args)
 	
 	return ctx
 }
 
 func (l *SafeQueryLogger) TraceQueryEnd(ctx context.Context, conn *pgx.Conn, data pgx.TraceQueryEndData) {
-	startTime, ok := ctx.Value(utils.QueryStartTimeKey).(time.Time)
+	startTime, ok := ctx.Value(QueryStartTimeKey).(time.Time)
 	if !ok {
 		return
 	}
 	
-	sql, _ := ctx.Value(utils.QuerySQLKey).(string)
-	args, _ := ctx.Value(utils.QueryArgsKey).([]any)
+	sql, _ := ctx.Value(QuerySQLKey).(string)
+	args, _ := ctx.Value(QueryArgsKey).([]any)
 	
 	duration := time.Since(startTime)
 
 	reqID := "bg-no-req"
-	if rid, ok := ctx.Value(utils.ReqIDKey).(string); ok {
+	if rid, ok := ctx.Value(ReqIDKey).(string); ok {
 		reqID = rid
 	}
 

@@ -9,9 +9,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/Doctor46-create/gophkeeper/internal/domain"
-	"github.com/Doctor46-create/gophkeeper/internal/logger"
 	"github.com/Doctor46-create/gophkeeper/internal/repository"
-	"github.com/Doctor46-create/gophkeeper/internal/utils"
 )
 
 type serviceImplementation struct {
@@ -27,12 +25,7 @@ func New(repo repository.Storage, secret string) Service {
 }
 
 func (s *serviceImplementation) Register(ctx context.Context, login, password string) error {
-	reqID := ctx.Value(utils.ReqIDKey).(string)
-	logger.Log.Infow("Register attempt",
-		"request_id", reqID,
-		"login", login,
-	)
-	return s.repo.CreateUser(ctx, login, s.hashPass(password))
+		return s.repo.CreateUser(ctx, login, s.hashPass(password))
 }
 
 func (s *serviceImplementation) Login(ctx context.Context, login, password string) (string, error) {

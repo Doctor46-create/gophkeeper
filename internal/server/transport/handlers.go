@@ -11,7 +11,6 @@ import (
 	"github.com/Doctor46-create/gophkeeper/internal/domain"
 	"github.com/Doctor46-create/gophkeeper/internal/logger"
 	"github.com/Doctor46-create/gophkeeper/internal/server/service"
-	"github.com/Doctor46-create/gophkeeper/internal/utils"
 )
 
 type HTTPTransport struct{ svc service.Service }
@@ -19,7 +18,7 @@ type HTTPTransport struct{ svc service.Service }
 func New(svc service.Service) Transport { return &HTTPTransport{svc: svc} }
 
 func (h *HTTPTransport) RegisterHandler(w http.ResponseWriter, r *http.Request) {
-	reqID, _ := r.Context().Value(utils.ReqIDKey).(string)
+	reqID, _ := r.Context().Value(ReqIDKey).(string)
 	reqLogger := logger.Log.With("request_id", reqID)
 
 	var req domain.AuthRequest
@@ -85,10 +84,10 @@ func (h *HTTPTransport) DataHandler(w http.ResponseWriter, r *http.Request) {
 	logger.Log.Infow("DataHandler started",
 		"method", r.Method,
 		"path", r.URL.Path,
-		"has_login", r.Context().Value(utils.UserLoginKey) != nil,
+		"has_login", r.Context().Value(UserLoginKey) != nil,
 	)
 
-	loginVal := r.Context().Value(utils.UserLoginKey)
+	loginVal := r.Context().Value(UserLoginKey)
 	if loginVal == nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -101,7 +100,7 @@ func (h *HTTPTransport) DataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	reqID := "unknown"
-	if reqIDVal := r.Context().Value(utils.ReqIDKey); reqIDVal != nil {
+	if reqIDVal := r.Context().Value(ReqIDKey); reqIDVal != nil {
 		reqID, _ = reqIDVal.(string)
 	}
 
