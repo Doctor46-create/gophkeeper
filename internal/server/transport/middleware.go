@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/Doctor46-create/gophkeeper/internal/logger"
-	"github.com/Doctor46-create/gophkeeper/internal/utils"
 )
 
 func LoggingMiddleware(next http.Handler) http.Handler {
@@ -20,7 +19,7 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 			reqID = uuid.NewString()
 		}
 
-		ctx := context.WithValue(r.Context(), utils.ReqIDKey, reqID)
+		ctx := context.WithValue(r.Context(), ReqIDKey, reqID)
 		r = r.WithContext(ctx)
 		w.Header().Set("X-Request-ID", reqID)
 
@@ -38,7 +37,7 @@ func PanicRecoveryMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				reqID, _ := r.Context().Value(utils.ReqIDKey).(string)
+				reqID, _ := r.Context().Value(ReqIDKey).(string)
 
 				logger.Log.Errorw("PANIC RECOVERED",
 					"panic", err,
@@ -58,7 +57,7 @@ func AuthMiddleware(secret string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
-			reqID, _ := r.Context().Value(utils.ReqIDKey).(string)
+			reqID, _ := r.Context().Value(ReqIDKey).(string)
 			logger.Log.Warnw("Auth failed: missing header", "request_id", reqID)
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
@@ -70,7 +69,7 @@ func AuthMiddleware(secret string, next http.Handler) http.Handler {
 			return []byte(secret), nil
 		})
 		if err != nil || !token.Valid {
-			reqID, _ := r.Context().Value(utils.ReqIDKey).(string)
+			reqID, _ := r.Context().Value(ReqIDKey).(string)
 			logger.Log.Warnw("Auth failed: invalid token",
 				"request_id", reqID,
 				"error", err,
@@ -81,10 +80,10 @@ func AuthMiddleware(secret string, next http.Handler) http.Handler {
 
 		if claims, ok := token.Claims.(jwt.MapClaims); ok {
 			if login, ok := claims["login"].(string); ok {
-				ctx := context.WithValue(r.Context(), utils.UserLoginKey, login)
+				ctx := context.WithValue(r.Context(), UserLoginKey, login)
 				r = r.WithContext(ctx)
 			} else {
-				reqID, _ := r.Context().Value(utils.ReqIDKey).(string)
+				reqID, _ := r.Context().Value(ReqIDKey).(string)
 				logger.Log.Warnw("Auth failed: no login in token", "request_id", reqID)
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return

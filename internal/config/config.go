@@ -7,14 +7,6 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
-type ServerConfig interface {
-	GetRunAddress() string
-	GetSecretKey() string
-	GetLogLevel() string
-	GetDatabaseDSN() string
-	GetDBConfig() DBConfig
-}
-
 type DBConfig struct {
 	MaxConns           int `env:"DB_MAX_CONNS" env-default:"25" yaml:"max_conns"`
 	MinConns           int `env:"DB_MIN_CONNS" env-default:"5" yaml:"min_conns"`
