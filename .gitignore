@@ -13,12 +13,27 @@ shortenerstress-darwin-amd64
 *.out
 
 # Binaries
-cmd/shortener/main
-cmd/shortener/shortener
-
+cmd/server/server        # Compiled Go binary
+client/bin/gk-cli        # Compiled Rust binary
+client/bin/gk-tui        # Compiled Rust binary
 # Dependency directories (remove the comment below to include it)
 vendor/
 
 # IDEs directories
 .idea
 .vscode
+
+# Rust
+client/target/
+
+# Go
+vendor/
+cmd/server/server
+/bin/
+
+# Universal
+.vscode/
+.idea/
+.DS_Store
+*.log
+.env

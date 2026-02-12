@@ -1,0 +1,147 @@
+use super::clipboard::copy;
+use crate::tui::app::{AddField, AddKind, InputMode, Screen, TuiApp};
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+
+pub fn handle_key(app: &mut TuiApp, key: KeyEvent) {
+  if key.kind != KeyEventKind::Press {
+    return;
+  }
+
+  if key.modifiers.contains(KeyModifiers::CONTROL) {
+    match key.code {
+      KeyCode::Char('c') => {
+        app.should_quit = true;
+        app.logout();
+        return;
+      }
+      KeyCode::Char('l') => {
+        app.screen = Screen::Login;
+        app.input_mode = InputMode::Editing;
+        return;
+      }
+      KeyCode::Char('r') => {
+        app.screen = Screen::Register;
+        app.input_mode = InputMode::Editing;
+        return;
+      }
+      _ => {}
+    }
+  }
+
+  match app.input_mode {
+    InputMode::Normal => handle_normal(app, key),
+    InputMode::Editing => handle_editing(app, key),
+  }
+}
+
+fn handle_normal(app: &mut TuiApp, key: KeyEvent) {
+  match key.code {
+    KeyCode::Char('l') if app.screen != Screen::MasterPassword => app.logout(),
+    KeyCode::Esc => {
+      app.input_mode = InputMode::Normal;
+
+      app.screen = match app.screen {
+        Screen::Secrets | Screen::AddSecret => Screen::Menu,
+        Screen::Register => Screen::Register,
+        Screen::Login => Screen::Login,
+        Screen::Menu => Screen::Menu,
+        Screen::MasterPassword => Screen::MasterPassword,
+      };
+    }
+    KeyCode::Char('s') if app.screen != Screen::MasterPassword => app.sync_secrets(),
+    KeyCode::Char('v') if app.screen != Screen::MasterPassword => app.sync_secrets(),
+    KeyCode::Char('a') if app.screen != Screen::MasterPassword => {
+      app.enter_add_secret();
+      app.input_mode = InputMode::Editing;
+    }
+    KeyCode::Char('c') if app.screen == Screen::Secrets => copy_to_clipboard(app),
+
+    KeyCode::Char('d') if app.screen == Screen::Secrets => {
+      app.delete_selected();
+    }
+
+    KeyCode::Up if app.screen == Screen::Menu => {
+      if app.selected > 0 {
+        app.selected -= 1;
+      }
+    }
+
+    KeyCode::Down if app.screen == Screen::Menu => {
+      if app.selected < 4 {
+        app.selected += 1;
+      }
+    }
+
+    KeyCode::Enter if app.screen == Screen::Menu => match app.selected {
+      0 => app.sync_secrets(),
+      1 => app.enter_add_secret(),
+      2 => app.sync_secrets(),
+      3 => app.logout(),
+      4 => app.should_quit = true,
+      _ => {}
+    },
+
+    KeyCode::Up => app.prev(),
+    KeyCode::Down => app.next(),
+
+    KeyCode::Right if app.screen == Screen::Secrets => {
+      let fields = app.current_secret_fields();
+      if !fields.is_empty() {
+        app.detail_selected = (app.detail_selected + 1).min(fields.len() - 1);
+      }
+    }
+
+    KeyCode::Left if app.screen == Screen::Secrets => {
+      app.detail_selected = app.detail_selected.saturating_sub(1);
+    }
+
+    KeyCode::Enter => app.submit(),
+    KeyCode::Char('e') => app.input_mode = InputMode::Editing,
+    _ => {}
+  }
+}
+
+fn handle_editing(app: &mut TuiApp, key: KeyEvent) {
+  match key.code {
+    KeyCode::Esc => app.input_mode = InputMode::Normal,
+    KeyCode::Tab => app.toggle_field(),
+    KeyCode::Enter => app.submit(),
+    KeyCode::Backspace => app.backspace(),
+    KeyCode::Char(c) => app.push_char(c),
+    KeyCode::Left => {
+      if app.screen == Screen::AddSecret && app.add_field == AddField::Kind {
+        app.add_kind = match app.add_kind {
+          AddKind::Password => AddKind::Card,
+          AddKind::Note => AddKind::Password,
+          AddKind::Card => AddKind::Note,
+        };
+      }
+    }
+    KeyCode::Right => {
+      if app.screen == Screen::AddSecret && app.add_field == AddField::Kind {
+        app.add_kind = match app.add_kind {
+          AddKind::Password => AddKind::Note,
+          AddKind::Note => AddKind::Card,
+          AddKind::Card => AddKind::Password,
+        };
+      }
+    }
+    _ => {}
+  }
+}
+
+fn copy_to_clipboard(app: &mut TuiApp) {
+  let fields = app.current_secret_fields();
+
+  if fields.is_empty() {
+    app.notify_error("Nothing to copy");
+    return;
+  }
+
+  let (_, value) = &fields[app.detail_selected];
+
+  match copy(value.clone()) {
+    Ok(_) => app.notify_success("Copied to clipboard"),
+    Err(e) => app.notify_error(format!("Clipboard error: {}", e)),
+  }
+}

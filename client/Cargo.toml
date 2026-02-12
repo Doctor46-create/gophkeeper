@@ -1,0 +1,45 @@
+[package]
+name = "gophkeeper-client"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.11", features = ["json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+aes-gcm = "0.10"
+sha2 = "0.10"
+base64 = "0.21"
+anyhow = "1.0"
+home = "0.5"
+
+# CLI Dependencies
+clap = { version = "4.0", features = ["derive"], optional = true }
+
+# TUI Dependencies 
+ratatui = { version = "0.26", optional = true }
+crossterm = { version = "0.27", optional = true }
+arboard = { version = "3.3", optional = true }
+rpassword = "7.4.0"
+jsonwebtoken = "10.3.0"
+
+[features]
+default = ["cli", "tui"]  
+cli = ["dep:clap"]
+tui = ["dep:ratatui", "dep:crossterm", "dep:arboard"]
+
+# Library
+[lib]
+name = "gophkeeper_client"
+path = "src/lib.rs"
+
+[[bin]]
+name = "gk-cli"           
+path = "bin/gk-cli.rs"    
+required-features = ["cli"]
+
+[[bin]]
+name = "gk-tui"           
+path = "bin/gk-tui.rs"    
+required-features = ["tui"]
