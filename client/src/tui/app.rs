@@ -1,6 +1,7 @@
 use crate::core::GopherApp;
-use crate::core::models::Secret;
-use std::time::{Duration, Instant, SystemTime};
+use crate::core::models::{DecryptedSecret, SecretPayload};
+
+use std::time::{Duration, Instant};
 use tokio::runtime::Runtime;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -20,16 +21,27 @@ pub enum InputMode {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AddStep {
-  Type,
-  Data,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LoginStep {
   Username,
   Password,
   ConfirmPassword,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AddKind {
+  Password,
+  Note,
+  Card,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AddField {
+  Kind,
+  Title,
+  Field1,
+  Field2,
+  Field3,
+  Field4,
 }
 
 pub struct TuiApp {
@@ -39,7 +51,7 @@ pub struct TuiApp {
   pub api: GopherApp,
   pub rt: Runtime,
 
-  pub secrets: Vec<Secret>,
+  pub secrets: Vec<DecryptedSecret>,
   pub selected: usize,
 
   pub username: String,
@@ -47,13 +59,17 @@ pub struct TuiApp {
   pub confirm_password: String,
   pub login_step: LoginStep,
 
-  pub add_type: String,
-  pub add_data: String,
-  pub add_step: AddStep,
+  pub add_kind: AddKind,
+  pub add_field: AddField,
 
-  pub login_time: Option<SystemTime>,
+  pub title: String,
+  pub field1: String,
+  pub field2: String,
+  pub field3: String,
+  pub field4: String,
 
   pub notification: Option<(String, Instant)>,
+
   pub should_quit: bool,
 }
 
@@ -64,46 +80,33 @@ impl TuiApp {
 
     let auto_login = rt.block_on(api.try_auto_login()).is_ok();
 
-    let screen = if auto_login {
-      Screen::MasterPassword
-    } else {
-      Screen::Login
-    };
-
     Ok(Self {
-      screen,
+      screen: if auto_login {
+        Screen::MasterPassword
+      } else {
+        Screen::Login
+      },
       input_mode: if auto_login {
         InputMode::Normal
       } else {
         InputMode::Editing
       },
-
       api,
       rt,
-
       secrets: vec![],
       selected: 0,
-
       username: String::new(),
       password: String::new(),
       confirm_password: String::new(),
       login_step: LoginStep::Username,
-
-      add_type: "password".into(),
-      add_data: String::new(),
-      add_step: AddStep::Type,
-
-      login_time: None,
-
-      notification: if auto_login {
-        Some((
-          "INFO: Auto login successful".into(),
-          Instant::now() + Duration::from_secs(2),
-        ))
-      } else {
-        None
-      },
-
+      add_kind: AddKind::Password,
+      add_field: AddField::Title,
+      title: String::new(),
+      field1: String::new(),
+      field2: String::new(),
+      field3: String::new(),
+      field4: String::new(),
+      notification: None,
       should_quit: false,
     })
   }
@@ -129,23 +132,15 @@ impl TuiApp {
     ));
   }
 
+  fn notify(&mut self, msg: impl Into<String>, seconds: u64) {
+    self.notification = Some((msg.into(), Instant::now() + Duration::from_secs(seconds)));
+  }
+
   pub fn clear_notifications(&mut self) {
     if let Some((_, until)) = &self.notification {
       if Instant::now() > *until {
         self.notification = None;
       }
-    }
-  }
-
-  pub fn next(&mut self) {
-    if !self.secrets.is_empty() {
-      self.selected = (self.selected + 1).min(self.secrets.len() - 1);
-    }
-  }
-
-  pub fn prev(&mut self) {
-    if !self.secrets.is_empty() {
-      self.selected = self.selected.saturating_sub(1);
     }
   }
 
@@ -173,7 +168,7 @@ impl TuiApp {
 
   pub fn register(&mut self) {
     if self.password != self.confirm_password {
-      self.notify_error("Passwords do not match");
+      self.notify("Passwords do not match", 3);
       return;
     }
 
@@ -183,62 +178,29 @@ impl TuiApp {
         .register(self.username.clone(), self.password.clone()),
     ) {
       Ok(_) => {
-        self.login_step = LoginStep::Username;
-        self.confirm_password.clear();
-        self.notify_success("Registered successfully");
+        self.notify("Registered successfully", 2);
         self.login();
       }
-      Err(e) => self.notify_error(format!("Register failed: {}", e)),
+      Err(e) => self.notify(format!("Register failed: {e}"), 3),
     }
   }
 
   pub fn logout(&mut self) {
     let _ = self.rt.block_on(self.api.logout());
-    self.api.clear_current_user();
-
     self.secrets.clear();
-    self.selected = 0;
     self.screen = Screen::Login;
-    self.input_mode = InputMode::Editing;
-
-    self.notify_info("Logged out");
-  }
-
-  pub fn view_secrets(&mut self) {
-    if self.secrets.is_empty() {
-      match self.rt.block_on(self.api.sync_and_decrypt()) {
-        Ok(data) => {
-          self.secrets = data;
-          self.selected = 0;
-          self.screen = Screen::Secrets;
-          self.input_mode = InputMode::Normal;
-          self.notify_success("Secrets loaded");
-        }
-        Err(e) => self.notify_error(format!("Failed to load secrets: {}", e)),
-      }
-    } else {
-      self.screen = Screen::Secrets;
-      self.input_mode = InputMode::Normal;
-    }
+    self.notify("Logged out", 2);
   }
 
   pub fn sync_secrets(&mut self) {
-    let current_screen = self.screen;
-
     match self.rt.block_on(self.api.sync_and_decrypt()) {
       Ok(data) => {
         self.secrets = data;
         self.selected = 0;
-        self.input_mode = InputMode::Normal;
-        self.notify_success("Secrets synced");
-
-        if current_screen == Screen::Menu && !self.secrets.is_empty() {
-          self.screen = Screen::Secrets;
-        } else {
-          self.screen = current_screen;
-        }
+        self.screen = Screen::Secrets;
+        self.notify("Secrets synced", 2);
       }
-      Err(e) => self.notify_error(format!("Sync failed: {}", e)),
+      Err(e) => self.notify(format!("Sync failed: {e}"), 3),
     }
   }
 
@@ -251,59 +213,73 @@ impl TuiApp {
     if self.rt.block_on(self.api.delete_secret(id)).is_ok() {
       self.secrets.remove(self.selected);
       self.selected = self.selected.saturating_sub(1);
-      self.notify_success("Secret deleted");
-    }
-  }
-
-  pub fn add_secret(&mut self) {
-    if self.add_type.is_empty() || self.add_data.is_empty() {
-      self.notify_error("Fields cannot be empty");
-      return;
-    }
-
-    match self.rt.block_on(
-      self
-        .api
-        .add_secret(self.add_type.clone(), self.add_data.clone()),
-    ) {
-      Ok(_) => {
-        self.add_data.clear();
-        self.screen = Screen::Menu;
-        self.input_mode = InputMode::Normal;
-        self.notify_success("Secret added");
-      }
-      Err(e) => self.notify_error(format!("Add failed: {}", e)),
+      self.notify("Secret deleted", 2);
     }
   }
 
   pub fn enter_add_secret(&mut self) {
     self.screen = Screen::AddSecret;
-    self.input_mode = InputMode::Editing;
+    self.reset_add_fields();
   }
 
-  pub fn toggle_field(&mut self) {
-    match self.screen {
-      Screen::Login => {
-        self.login_step = match self.login_step {
-          LoginStep::Username => LoginStep::Password,
-          LoginStep::Password => LoginStep::Username,
-          LoginStep::ConfirmPassword => LoginStep::Username,
-        };
+  fn reset_add_fields(&mut self) {
+    self.title.clear();
+    self.field1.clear();
+    self.field2.clear();
+    self.field3.clear();
+    self.field4.clear();
+    self.add_field = AddField::Title;
+  }
+
+  pub fn add_secret(&mut self) {
+    if self.title.is_empty() {
+      self.notify("Title required", 3);
+      return;
+    }
+
+    let payload = match self.add_kind {
+      AddKind::Password => SecretPayload::Password {
+        title: self.title.clone(),
+        login: self.field1.clone(),
+        password: self.field2.clone(),
+        url: if self.field3.is_empty() {
+          None
+        } else {
+          Some(self.field3.clone())
+        },
+      },
+      AddKind::Note => SecretPayload::Note {
+        title: self.title.clone(),
+        content: self.field1.clone(),
+      },
+      AddKind::Card => SecretPayload::Card {
+        title: self.title.clone(),
+        holder: self.field1.clone(),
+        number: self.field2.clone(),
+        expiry: self.field3.clone(),
+        cvv: self.field4.clone(),
+      },
+    };
+
+    match self.rt.block_on(self.api.add_secret(payload)) {
+      Ok(_) => {
+        self.screen = Screen::Menu;
+        self.input_mode = InputMode::Normal;
+        self.notify("Secret added", 2);
       }
-      Screen::Register => {
-        self.login_step = match self.login_step {
-          LoginStep::Username => LoginStep::Password,
-          LoginStep::Password => LoginStep::ConfirmPassword,
-          LoginStep::ConfirmPassword => LoginStep::Username,
-        };
-      }
-      Screen::AddSecret => {
-        self.add_step = match self.add_step {
-          AddStep::Type => AddStep::Data,
-          AddStep::Data => AddStep::Type,
-        };
-      }
-      _ => {}
+      Err(e) => self.notify(format!("Add failed: {e}"), 3),
+    }
+  }
+
+  pub fn next(&mut self) {
+    if !self.secrets.is_empty() {
+      self.selected = (self.selected + 1).min(self.secrets.len() - 1);
+    }
+  }
+
+  pub fn prev(&mut self) {
+    if !self.secrets.is_empty() {
+      self.selected = self.selected.saturating_sub(1);
     }
   }
 
@@ -314,12 +290,14 @@ impl TuiApp {
         LoginStep::Password => self.password.push(c),
         LoginStep::ConfirmPassword => self.confirm_password.push(c),
       },
-      Screen::MasterPassword => {
-        self.password.push(c);
-      }
-      Screen::AddSecret => match self.add_step {
-        AddStep::Type => self.add_type.push(c),
-        AddStep::Data => self.add_data.push(c),
+      Screen::MasterPassword => self.password.push(c),
+      Screen::AddSecret => match self.add_field {
+        AddField::Kind => {}
+        AddField::Title => self.title.push(c),
+        AddField::Field1 => self.field1.push(c),
+        AddField::Field2 => self.field2.push(c),
+        AddField::Field3 => self.field3.push(c),
+        AddField::Field4 => self.field4.push(c),
       },
       _ => {}
     }
@@ -341,18 +319,27 @@ impl TuiApp {
       Screen::MasterPassword => {
         self.password.pop();
       }
-      Screen::AddSecret => match self.add_step {
-        AddStep::Type => {
-          self.add_type.pop();
+      Screen::AddSecret => match self.add_field {
+        AddField::Kind => {}
+        AddField::Title => {
+          self.title.pop();
         }
-        AddStep::Data => {
-          self.add_data.pop();
+        AddField::Field1 => {
+          self.field1.pop();
+        }
+        AddField::Field2 => {
+          self.field2.pop();
+        }
+        AddField::Field3 => {
+          self.field3.pop();
+        }
+        AddField::Field4 => {
+          self.field4.pop();
         }
       },
       _ => {}
     }
   }
-
   pub fn submit(&mut self) {
     match self.screen {
       Screen::Login => match self.login_step {
@@ -370,6 +357,54 @@ impl TuiApp {
         self.submit_master_password();
       }
       Screen::AddSecret => self.add_secret(),
+      _ => {}
+    }
+  }
+
+  pub fn toggle_field(&mut self) {
+    match self.screen {
+      Screen::AddSecret => {
+        let field_order: Vec<AddField> = match self.add_kind {
+          AddKind::Password => vec![
+            AddField::Kind,
+            AddField::Title,
+            AddField::Field1,
+            AddField::Field2,
+            AddField::Field3,
+          ],
+          AddKind::Note => vec![AddField::Kind, AddField::Title, AddField::Field1],
+          AddKind::Card => vec![
+            AddField::Kind,
+            AddField::Title,
+            AddField::Field1,
+            AddField::Field2,
+            AddField::Field3,
+            AddField::Field4,
+          ],
+        };
+
+        if let Some(pos) = field_order.iter().position(|f| *f == self.add_field) {
+          let next_index = (pos + 1) % field_order.len();
+          self.add_field = field_order[next_index];
+        }
+      }
+
+      Screen::Login => {
+        self.login_step = match self.login_step {
+          LoginStep::Username => LoginStep::Password,
+          LoginStep::Password => LoginStep::Username,
+          LoginStep::ConfirmPassword => LoginStep::Username,
+        };
+      }
+
+      Screen::Register => {
+        self.login_step = match self.login_step {
+          LoginStep::Username => LoginStep::Password,
+          LoginStep::Password => LoginStep::ConfirmPassword,
+          LoginStep::ConfirmPassword => LoginStep::Username,
+        };
+      }
+
       _ => {}
     }
   }

@@ -4,9 +4,10 @@ use rpassword::prompt_password;
 use tokio::runtime::Runtime;
 
 use gophkeeper_client::cli::CliApp;
-use gophkeeper_client::cli::app::Commands;
+use gophkeeper_client::cli::app::{Commands, SecretTypeCommands};
 
 use gophkeeper_client::cli::app::Cli;
+use gophkeeper_client::core::models::SecretPayload;
 
 fn main() -> Result<()> {
   let cli = Cli::parse();
@@ -39,18 +40,40 @@ async fn run(cli: Cli) -> Result<()> {
       println!("{:#?}", secrets);
     }
 
-    Commands::Add { type_val, data } => {
-      ensure_master_password(&mut app)?;
-      app.add_secret(type_val, data).await?;
-      println!("Secret added.");
+    Commands::Logout => {
+      app.logout().await?;
     }
 
+    Commands::Add { secret_type } => {
+      ensure_master_password(&mut app)?;
+
+      let payload = match secret_type {
+        SecretTypeCommands::Password(args) => SecretPayload::Password {
+          title: args.title,
+          login: args.login,
+          password: args.password,
+          url: args.url,
+        },
+        SecretTypeCommands::Note(args) => SecretPayload::Note {
+          title: args.title,
+          content: args.content,
+        },
+        SecretTypeCommands::Card(args) => SecretPayload::Card {
+          title: args.title,
+          holder: args.holder,
+          number: args.number,
+          expiry: args.expiry,
+          cvv: args.cvv,
+        },
+      };
+      app.add_secret(payload).await?;
+      println!("Secret added successfully");
+    }
     Commands::Delete { id } => {
       app.delete_secret(id).await?;
       println!("Secret deleted.");
     }
   }
-
   Ok(())
 }
 

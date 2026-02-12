@@ -1,4 +1,4 @@
-use crate::tui::app::{AddStep, InputMode, LoginStep, Screen, TuiApp};
+use crate::tui::app::{AddField, AddKind, InputMode, LoginStep, Screen, TuiApp};
 use ratatui::{
   Frame,
   layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -7,25 +7,7 @@ use ratatui::{
   widgets::{Block, BorderType, Borders, List, ListItem, Paragraph, Row, Table, Wrap},
 };
 
-fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
-  let popup_layout = Layout::default()
-    .direction(Direction::Vertical)
-    .constraints([
-      Constraint::Percentage((100 - percent_y) / 2),
-      Constraint::Percentage(percent_y),
-      Constraint::Percentage((100 - percent_y) / 2),
-    ])
-    .split(r);
-
-  Layout::default()
-    .direction(Direction::Horizontal)
-    .constraints([
-      Constraint::Percentage((100 - percent_x) / 2),
-      Constraint::Percentage(percent_x),
-      Constraint::Percentage((100 - percent_x) / 2),
-    ])
-    .split(popup_layout[1])[1]
-}
+use crate::core::models::SecretPayload;
 
 pub fn draw(f: &mut Frame, app: &TuiApp) {
   let chunks = Layout::default()
@@ -75,449 +57,101 @@ fn draw_body(f: &mut Frame, app: &TuiApp, area: Rect) {
   }
 }
 
-//fn draw_menu(f: &mut Frame, app: &TuiApp, area: Rect) {
-//  let chunks = Layout::default()
-//    .direction(Direction::Vertical)
-//    .constraints([Constraint::Length(14), Constraint::Min(6)])
-//    .split(area);
-//
-//  let banner_area = chunks[0];
-//  let menu_area = chunks[1];
-//
-//  let banner_chunks = Layout::default()
-//    .direction(Direction::Horizontal)
-//    .constraints([Constraint::Percentage(45), Constraint::Percentage(55)])
-//    .split(banner_area);
-//
-//  let gopher_area = banner_chunks[0];
-//  let text_area = banner_chunks[1];
-//
-//  let gopher_art = r#"
-//     .----.
-//          _.'__    `.
-//      .--(#)(##)---/#\
-//    .' @          /###\
-//    :         ,   #####
-//     `-..__.-' _.-\###/
-//        `;_:    `"'
-//         .'"""""`.
-//        /,       ,\
-//       //         \\
-//       `-._______.-'
-//       ___`. | .'___
-//      (______|______)"#;
-//
-//  let gopher = Paragraph::new(gopher_art)
-//    .style(Style::default().fg(Color::Green))
-//    .alignment(Alignment::Center)
-//    .block(Block::default());
-//
-//  let text_content = vec![
-//    Line::from(Span::styled(
-//      "╔══════════════════════════════════╗",
-//      Style::default().fg(Color::Cyan),
-//    )),
-//    Line::from(vec![
-//      Span::styled("║", Style::default().fg(Color::Cyan)),
-//      Span::raw("                                  "),
-//      Span::styled("║", Style::default().fg(Color::Cyan)),
-//    ]),
-//    Line::from(vec![
-//      Span::styled("║", Style::default().fg(Color::Cyan)),
-//      Span::styled(
-//        "      🔐 GOPHERKEEPER      ",
-//        Style::default()
-//          .fg(Color::Yellow)
-//          .add_modifier(Modifier::BOLD),
-//      ),
-//      Span::styled("║", Style::default().fg(Color::Cyan)),
-//    ]),
-//    Line::from(vec![
-//      Span::styled("║", Style::default().fg(Color::Cyan)),
-//      Span::raw("                                  "),
-//      Span::styled("║", Style::default().fg(Color::Cyan)),
-//    ]),
-//    Line::from(vec![
-//      Span::styled("║", Style::default().fg(Color::Cyan)),
-//      Span::styled(
-//        "  Secure Password Manager  ",
-//        Style::default().fg(Color::Green),
-//      ),
-//      Span::styled("║", Style::default().fg(Color::Cyan)),
-//    ]),
-//    Line::from(vec![
-//      Span::styled("║", Style::default().fg(Color::Cyan)),
-//      Span::raw("                                  "),
-//      Span::styled("║", Style::default().fg(Color::Cyan)),
-//    ]),
-//    Line::from(vec![
-//      Span::styled("║", Style::default().fg(Color::Cyan)),
-//      Span::styled(
-//        "        TUI Edition        ",
-//        Style::default().fg(Color::Magenta),
-//      ),
-//      Span::styled("║", Style::default().fg(Color::Cyan)),
-//    ]),
-//    Line::from(vec![
-//      Span::styled("║", Style::default().fg(Color::Cyan)),
-//      Span::raw("                                  "),
-//      Span::styled("║", Style::default().fg(Color::Cyan)),
-//    ]),
-//    Line::from(Span::styled(
-//      "╚══════════════════════════════════╝",
-//      Style::default().fg(Color::Cyan),
-//    )),
-//  ];
-//
-//  let text_widget = Paragraph::new(text_content)
-//    .alignment(Alignment::Center)
-//    .block(Block::default());
-//
-//  f.render_widget(gopher, gopher_area);
-//  f.render_widget(text_widget, text_area);
-//
-//  draw_helper_widget(f, app, menu_area);
-//}
-//
-//fn draw_helper_widget(f: &mut Frame, app: &TuiApp, area: Rect) {
-//  let chunks = Layout::default()
-//    .direction(Direction::Horizontal)
-//    .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
-//    .split(area);
-//
-//  let menu_list_area = chunks[0];
-//  let helper_area = chunks[1];
-//
-//  let items = vec![
-//    ListItem::new("🔄  Sync secrets").style(Style::default().fg(Color::Green)),
-//    ListItem::new("➕  Add secret").style(Style::default().fg(Color::Blue)),
-//    ListItem::new("📋  View secrets").style(Style::default().fg(Color::Yellow)),
-//    ListItem::new("👤  Logout").style(Style::default().fg(Color::Magenta)),
-//    ListItem::new("🚪  Quit").style(Style::default().fg(Color::Red)),
-//  ];
-//
-//  let list = List::new(items)
-//    .block(
-//      Block::default()
-//        .borders(Borders::ALL)
-//        .title(" Main Menu ")
-//        .border_type(BorderType::Rounded)
-//        .title_alignment(Alignment::Center),
-//    )
-//    .highlight_style(
-//      Style::default()
-//        .fg(Color::Black)
-//        .bg(Color::Cyan)
-//        .add_modifier(Modifier::BOLD),
-//    )
-//    .highlight_symbol("» ");
-//
-//  f.render_widget(list, menu_list_area);
-//
-//  let helper_text = vec![
-//    Line::from(vec![
-//      Span::styled("ℹ️ ", Style::default().fg(Color::Yellow)),
-//      Span::styled(" Quick Help", Style::default().add_modifier(Modifier::BOLD)),
-//    ]),
-//    Line::from(""),
-//    Line::from(vec![
-//      Span::styled("• ", Style::default().fg(Color::Green)),
-//      Span::styled("s", Style::default().fg(Color::Cyan)),
-//      Span::raw(" - Sync secrets"),
-//    ]),
-//    Line::from(vec![
-//      Span::styled("• ", Style::default().fg(Color::Blue)),
-//      Span::styled("a", Style::default().fg(Color::Cyan)),
-//      Span::raw(" - Add secret"),
-//    ]),
-//    Line::from(vec![
-//      Span::styled("• ", Style::default().fg(Color::Yellow)),
-//      Span::styled("v", Style::default().fg(Color::Cyan)),
-//      Span::raw(" - View secrets"),
-//    ]),
-//    Line::from(vec![
-//      Span::styled("• ", Style::default().fg(Color::Magenta)),
-//      Span::styled("l", Style::default().fg(Color::Cyan)),
-//      Span::raw(" - Logout"),
-//    ]),
-//    Line::from(vec![
-//      Span::styled("• ", Style::default().fg(Color::Red)),
-//      Span::styled("Ctrl + c", Style::default().fg(Color::Cyan)),
-//      Span::raw(" - Quit"),
-//    ]),
-//    Line::from(""),
-//    Line::from(Span::styled(
-//      "─────────",
-//      Style::default().fg(Color::DarkGray),
-//    )),
-//    Line::from(""),
-//    Line::from(vec![
-//      Span::styled("📊 ", Style::default().fg(Color::Green)),
-//      Span::styled("Stats:", Style::default().add_modifier(Modifier::BOLD)),
-//    ]),
-//    Line::from(vec![
-//      Span::raw("Secrets: "),
-//      Span::styled(
-//        format!("{}", app.secrets.len()),
-//        Style::default()
-//          .fg(Color::Magenta)
-//          .add_modifier(Modifier::BOLD),
-//      ),
-//    ]),
-//    Line::from(vec![
-//      Span::raw("User: "),
-//      Span::styled(
-//        app.api.get_current_user().unwrap_or("Not logged in"),
-//        Style::default().fg(Color::Cyan),
-//      ),
-//    ]),
-//  ];
-//
-//  let helper_widget = Paragraph::new(helper_text)
-//    .block(
-//      Block::default()
-//        .borders(Borders::ALL)
-//        .title(" Information ")
-//        .border_type(BorderType::Rounded)
-//        .padding(ratatui::widgets::Padding::new(1, 1, 1, 1)),
-//    )
-//    .wrap(Wrap { trim: true })
-//    .style(Style::default().fg(Color::Gray));
-//
-//  f.render_widget(helper_widget, helper_area);
-//}
-
-fn draw_menu(f: &mut Frame, app: &TuiApp, area: Rect) {
-  // Center the entire menu horizontally
-  let centered_area = Layout::default()
-    .direction(Direction::Horizontal)
-    .constraints([
-      Constraint::Percentage(20),
-      Constraint::Percentage(60),
-      Constraint::Percentage(20),
-    ])
-    .split(area);
-
-  let content_area = centered_area[1];
-
-  let chunks = Layout::default()
+pub fn draw_menu(f: &mut Frame, app: &TuiApp, area: Rect) {
+  let vertical = Layout::default()
     .direction(Direction::Vertical)
-    .constraints([Constraint::Length(14), Constraint::Min(6)])
-    .split(content_area);
-
-  let banner_area = chunks[0];
-  let menu_area = chunks[1];
-
-  let banner_chunks = Layout::default()
-    .direction(Direction::Horizontal)
-    .constraints([Constraint::Percentage(45), Constraint::Percentage(55)])
-    .split(banner_area);
-
-  let gopher_area = banner_chunks[0];
-  let text_area = banner_chunks[1];
-
-  let gopher_art = r#"
-     .----.
-          _.'__    `.
-      .--(#)(##)---/#\
-    .' @          /###\
-    :         ,   #####
-     `-..__.-' _.-\###/
-        `;_:    `"'
-         .'"""""`.
-        /,       ,\
-       //         \\
-       `-._______.-'
-       ___`. | .'___
-      (______|______)"#;
-
-  let gopher = Paragraph::new(gopher_art)
-    .style(Style::default().fg(Color::Green))
-    .alignment(Alignment::Center)
-    .block(Block::default());
-
-  let text_content = vec![
-    Line::from(Span::styled(
-      "╔══════════════════════════════════╗",
-      Style::default().fg(Color::DarkGray),
-    )),
-    Line::from(vec![
-      Span::styled("║", Style::default().fg(Color::DarkGray)),
-      Span::raw("                                  "),
-      Span::styled("║", Style::default().fg(Color::DarkGray)),
-    ]),
-    Line::from(vec![
-      Span::styled("║", Style::default().fg(Color::DarkGray)),
-      Span::styled(
-        "      GOPHERKEEPER      ",
-        Style::default()
-          .fg(Color::LightYellow)
-          .add_modifier(Modifier::BOLD),
-      ),
-      Span::styled("║", Style::default().fg(Color::DarkGray)),
-    ]),
-    Line::from(vec![
-      Span::styled("║", Style::default().fg(Color::DarkGray)),
-      Span::raw("                                  "),
-      Span::styled("║", Style::default().fg(Color::DarkGray)),
-    ]),
-    Line::from(vec![
-      Span::styled("║", Style::default().fg(Color::DarkGray)),
-      Span::styled(
-        "  Secure Password Manager  ",
-        Style::default().fg(Color::Green),
-      ),
-      Span::styled("║", Style::default().fg(Color::DarkGray)),
-    ]),
-    Line::from(vec![
-      Span::styled("║", Style::default().fg(Color::DarkGray)),
-      Span::raw("                                  "),
-      Span::styled("║", Style::default().fg(Color::DarkGray)),
-    ]),
-    Line::from(vec![
-      Span::styled("║", Style::default().fg(Color::DarkGray)),
-      Span::styled(
-        "        TUI Edition        ",
-        Style::default().fg(Color::LightBlue),
-      ),
-      Span::styled("║", Style::default().fg(Color::DarkGray)),
-    ]),
-    Line::from(vec![
-      Span::styled("║", Style::default().fg(Color::DarkGray)),
-      Span::raw("                                  "),
-      Span::styled("║", Style::default().fg(Color::DarkGray)),
-    ]),
-    Line::from(Span::styled(
-      "╚══════════════════════════════════╝",
-      Style::default().fg(Color::DarkGray),
-    )),
-  ];
-
-  let text_widget = Paragraph::new(text_content)
-    .alignment(Alignment::Center)
-    .block(Block::default());
-
-  f.render_widget(gopher, gopher_area);
-  f.render_widget(text_widget, text_area);
-
-  draw_helper_widget(f, app, menu_area);
-}
-
-fn draw_helper_widget(f: &mut Frame, app: &TuiApp, area: Rect) {
-  // Center the menu and helper horizontally within the menu area
-  let centered_area = Layout::default()
-    .direction(Direction::Horizontal)
-    .constraints([
-      Constraint::Percentage(10),
-      Constraint::Percentage(80),
-      Constraint::Percentage(10),
-    ])
+    .constraints([Constraint::Length(5), Constraint::Min(10)])
     .split(area);
 
-  let content_area = centered_area[1];
+  let header_area = vertical[0];
+  let body_area = vertical[1];
 
-  let chunks = Layout::default()
+  let header = Paragraph::new(vec![
+    Line::from(Span::styled(
+      "GOPHERKEEPER",
+      Style::default()
+        .fg(Color::LightYellow)
+        .add_modifier(Modifier::BOLD),
+    )),
+    Line::from(Span::styled(
+      "Secure Vault • TUI Edition",
+      Style::default().fg(Color::Green),
+    )),
+  ])
+  .alignment(Alignment::Center)
+  .block(
+    Block::default()
+      .borders(Borders::ALL)
+      .border_type(BorderType::Rounded)
+      .border_style(Style::default().fg(Color::DarkGray)),
+  );
+
+  f.render_widget(header, header_area);
+
+  let horizontal = Layout::default()
     .direction(Direction::Horizontal)
     .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
-    .split(content_area);
+    .split(body_area);
 
-  let menu_list_area = chunks[0];
-  let helper_area = chunks[1];
+  let menu_area = horizontal[0];
+  let info_area = horizontal[1];
 
-  let items = vec![
-    ListItem::new("Sync secrets").style(Style::default().fg(Color::White)),
-    ListItem::new("Add secret").style(Style::default().fg(Color::White)),
-    ListItem::new("View secrets").style(Style::default().fg(Color::White)),
-    ListItem::new("Logout").style(Style::default().fg(Color::White)),
-    ListItem::new("Quit").style(Style::default().fg(Color::White)),
+  draw_menu_list(f, app, menu_area);
+  draw_info_panel(f, app, info_area);
+}
+
+fn draw_menu_list(f: &mut Frame, app: &TuiApp, area: Rect) {
+  let items = [
+    "Sync secrets",
+    "Add secret",
+    "View secrets",
+    "Logout",
+    "Quit",
   ];
 
-  let list = List::new(items)
-    .block(
-      Block::default()
-        .borders(Borders::ALL)
-        .title(" Main Menu ")
-        .title_alignment(Alignment::Center)
-        .border_style(Style::default().fg(Color::DarkGray)),
-    )
-    .highlight_style(
-      Style::default()
-        .fg(Color::Black)
-        .bg(Color::LightYellow)
-        .add_modifier(Modifier::BOLD),
-    )
-    .highlight_symbol("> ");
+  let rows: Vec<ListItem> = items
+    .iter()
+    .enumerate()
+    .map(|(i, item)| {
+      let style = if i == app.selected {
+        Style::default()
+          .fg(Color::Black)
+          .bg(Color::LightYellow)
+          .add_modifier(Modifier::BOLD)
+      } else {
+        Style::default().fg(Color::White)
+      };
 
-  f.render_widget(list, menu_list_area);
+      ListItem::new(*item).style(style)
+    })
+    .collect();
 
-  let helper_text = vec![
-    Line::from(vec![Span::styled(
-      "Quick Help",
-      Style::default()
-        .fg(Color::White)
-        .add_modifier(Modifier::BOLD),
-    )]),
-    Line::from(""),
+  let list = List::new(rows).block(
+    Block::default()
+      .borders(Borders::ALL)
+      .title(" Main Menu ")
+      .title_alignment(Alignment::Center)
+      .border_type(BorderType::Rounded)
+      .border_style(Style::default().fg(Color::DarkGray)),
+  );
+
+  f.render_widget(list, area);
+}
+
+fn draw_info_panel(f: &mut Frame, app: &TuiApp, area: Rect) {
+  let label = Style::default()
+    .fg(Color::LightYellow)
+    .add_modifier(Modifier::BOLD);
+
+  let user = app.api.get_current_user().unwrap_or("Not logged in");
+
+  let lines = vec![
     Line::from(vec![
-      Span::styled(
-        "s",
-        Style::default()
-          .fg(Color::LightYellow)
-          .add_modifier(Modifier::BOLD),
-      ),
-      Span::raw(" - Sync secrets"),
+      Span::styled("User: ", label),
+      Span::styled(user, Style::default().fg(Color::Cyan)),
     ]),
     Line::from(vec![
-      Span::styled(
-        "a",
-        Style::default()
-          .fg(Color::LightYellow)
-          .add_modifier(Modifier::BOLD),
-      ),
-      Span::raw(" - Add secret"),
-    ]),
-    Line::from(vec![
-      Span::styled(
-        "v",
-        Style::default()
-          .fg(Color::LightYellow)
-          .add_modifier(Modifier::BOLD),
-      ),
-      Span::raw(" - View secrets"),
-    ]),
-    Line::from(vec![
-      Span::styled(
-        "l",
-        Style::default()
-          .fg(Color::LightYellow)
-          .add_modifier(Modifier::BOLD),
-      ),
-      Span::raw(" - Logout"),
-    ]),
-    Line::from(vec![
-      Span::styled(
-        "Ctrl+c",
-        Style::default()
-          .fg(Color::LightRed)
-          .add_modifier(Modifier::BOLD),
-      ),
-      Span::raw(" - Quit"),
-    ]),
-    Line::from(""),
-    Line::from(Span::styled(
-      "──────────",
-      Style::default().fg(Color::DarkGray),
-    )),
-    Line::from(""),
-    Line::from(vec![Span::styled(
-      "Stats",
-      Style::default()
-        .fg(Color::White)
-        .add_modifier(Modifier::BOLD),
-    )]),
-    Line::from(vec![
-      Span::styled("• ", Style::default().fg(Color::DarkGray)),
-      Span::raw("Secrets: "),
+      Span::styled("Secrets: ", label),
       Span::styled(
         format!("{}", app.secrets.len()),
         Style::default()
@@ -525,196 +159,380 @@ fn draw_helper_widget(f: &mut Frame, app: &TuiApp, area: Rect) {
           .add_modifier(Modifier::BOLD),
       ),
     ]),
+    Line::from(""),
+    Line::from(Span::styled(
+      "Quick Keys",
+      Style::default()
+        .fg(Color::White)
+        .add_modifier(Modifier::BOLD),
+    )),
+    Line::from(""),
+    Line::from(vec![Span::styled("s ", label), Span::raw("Sync")]),
+    Line::from(vec![Span::styled("a ", label), Span::raw("Add")]),
+    Line::from(vec![Span::styled("v ", label), Span::raw("View")]),
+    Line::from(vec![Span::styled("l ", label), Span::raw("Logout")]),
     Line::from(vec![
-      Span::styled("• ", Style::default().fg(Color::DarkGray)),
-      Span::raw("User: "),
       Span::styled(
-        app.api.get_current_user().unwrap_or("Not logged in"),
-        Style::default().fg(Color::Cyan),
+        "Ctrl+c ",
+        Style::default()
+          .fg(Color::LightRed)
+          .add_modifier(Modifier::BOLD),
       ),
+      Span::raw("Quit"),
     ]),
   ];
 
-  let helper_widget = Paragraph::new(helper_text)
+  let panel = Paragraph::new(lines)
     .block(
       Block::default()
         .borders(Borders::ALL)
         .title(" Information ")
         .title_alignment(Alignment::Center)
+        .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(Color::DarkGray)),
     )
     .wrap(Wrap { trim: true })
     .style(Style::default().fg(Color::White));
 
-  f.render_widget(helper_widget, helper_area);
+  f.render_widget(panel, area);
 }
 
-fn draw_secrets(f: &mut Frame, app: &TuiApp, area: Rect) {
+pub fn draw_secrets(f: &mut Frame, app: &TuiApp, area: Rect) {
   let chunks = Layout::default()
     .direction(Direction::Vertical)
-    .constraints([Constraint::Min(3), Constraint::Length(3)])
+    .constraints([
+      Constraint::Percentage(55),
+      Constraint::Percentage(35),
+      Constraint::Length(3),
+    ])
     .split(area);
 
-  let table_area = chunks[0];
-  let help_area = chunks[1];
+  let header_style = Style::default()
+    .fg(Color::LightYellow)
+    .add_modifier(Modifier::BOLD);
+
+  let header = Row::new(vec!["Title", "Kind"])
+    .style(header_style)
+    .bottom_margin(1);
+
   let rows: Vec<Row> = app
     .secrets
     .iter()
     .enumerate()
     .map(|(i, s)| {
+      let kind = match &s.payload {
+        SecretPayload::Password { .. } => "Password",
+        SecretPayload::Note { .. } => "Note",
+        SecretPayload::Card { .. } => "Card",
+      };
+
+      let title = match &s.payload {
+        SecretPayload::Password { title, .. } => title,
+        SecretPayload::Note { title, .. } => title,
+        SecretPayload::Card { title, .. } => title,
+      };
+
       let style = if i == app.selected {
         Style::default()
           .fg(Color::Black)
-          .bg(Color::Cyan)
+          .bg(Color::LightYellow)
           .add_modifier(Modifier::BOLD)
       } else {
-        Style::default()
+        Style::default().fg(Color::White)
       };
 
-      Row::new(vec![s.id.clone(), s.secret_type.clone()]).style(style)
+      Row::new(vec![title.clone(), kind.to_string()]).style(style)
     })
     .collect();
 
   let table = Table::new(
     rows,
-    [
-      Constraint::Length(4),
-      Constraint::Percentage(50),
-      Constraint::Percentage(50),
-    ],
+    [Constraint::Percentage(70), Constraint::Percentage(30)],
   )
-  .block(Block::default().borders(Borders::ALL).title("Secrets"));
+  .header(header)
+  .block(
+    Block::default()
+      .borders(Borders::ALL)
+      .title(" Secrets ")
+      .title_alignment(Alignment::Center)
+      .border_type(BorderType::Rounded)
+      .border_style(Style::default().fg(Color::DarkGray)),
+  );
 
-  f.render_widget(table, table_area);
+  f.render_widget(table, chunks[0]);
 
-  let help_text = if !app.secrets.is_empty() {
-    Line::from(vec![
-      Span::styled("↑/↓", Style::default().add_modifier(Modifier::BOLD)),
-      Span::raw(" Navigate • "),
-      Span::styled("c", Style::default().add_modifier(Modifier::BOLD)),
-      Span::raw(" Copy • "),
-      Span::styled("d", Style::default().add_modifier(Modifier::BOLD)),
-      Span::raw(" Delete • "),
-      Span::styled("ESC", Style::default().add_modifier(Modifier::BOLD)),
-      Span::raw(" Back • "),
-      Span::styled("l", Style::default().add_modifier(Modifier::BOLD)),
-      Span::raw(" Logout"),
-    ])
-  } else {
-    Line::from("No secrets found. Press 'ESC' to go back.")
-  };
+  if let Some(secret) = app.secrets.get(app.selected) {
+    let mut lines: Vec<Line> = Vec::new();
 
-  let help_widget = Paragraph::new(help_text)
+    let label_style = Style::default()
+      .fg(Color::LightYellow)
+      .add_modifier(Modifier::BOLD);
+
+    match &secret.payload {
+      SecretPayload::Password {
+        title,
+        login,
+        password,
+        url,
+      } => {
+        lines.push(Line::from(vec![
+          Span::styled("Title: ", label_style),
+          Span::raw(title),
+        ]));
+        lines.push(Line::from(vec![
+          Span::styled("Login: ", label_style),
+          Span::raw(login),
+        ]));
+        lines.push(Line::from(vec![
+          Span::styled("Password: ", label_style),
+          Span::raw(password),
+        ]));
+        if let Some(u) = url {
+          lines.push(Line::from(vec![
+            Span::styled("URL: ", label_style),
+            Span::raw(u),
+          ]));
+        }
+      }
+
+      SecretPayload::Note { title, content } => {
+        lines.push(Line::from(vec![
+          Span::styled("Title: ", label_style),
+          Span::raw(title),
+        ]));
+        lines.push(Line::from(""));
+        lines.push(Line::from(content.clone()));
+      }
+
+      SecretPayload::Card {
+        title,
+        holder,
+        number,
+        expiry,
+        cvv,
+      } => {
+        lines.push(Line::from(vec![
+          Span::styled("Title: ", label_style),
+          Span::raw(title),
+        ]));
+        lines.push(Line::from(vec![
+          Span::styled("Holder: ", label_style),
+          Span::raw(holder),
+        ]));
+        lines.push(Line::from(vec![
+          Span::styled("Number: ", label_style),
+          Span::raw(number),
+        ]));
+        lines.push(Line::from(vec![
+          Span::styled("Expiry: ", label_style),
+          Span::raw(expiry),
+        ]));
+        lines.push(Line::from(vec![
+          Span::styled("CVV: ", label_style),
+          Span::raw(cvv),
+        ]));
+      }
+    }
+
+    lines.push(Line::from(""));
+    lines.push(Line::from(vec![
+      Span::styled("Created: ", label_style),
+      Span::raw(secret.created_at.as_deref().unwrap_or("-")),
+    ]));
+    lines.push(Line::from(vec![
+      Span::styled("Updated: ", label_style),
+      Span::raw(secret.updated_at.as_deref().unwrap_or("-")),
+    ]));
+
+    let detail = Paragraph::new(lines)
+      .block(
+        Block::default()
+          .borders(Borders::ALL)
+          .title(" Secret Info ")
+          .title_alignment(Alignment::Center)
+          .border_type(BorderType::Rounded)
+          .border_style(Style::default().fg(Color::DarkGray)),
+      )
+      .wrap(Wrap { trim: true });
+
+    f.render_widget(detail, chunks[1]);
+  }
+
+  let help = Line::from(vec![
+    Span::styled(
+      "↑/↓ ",
+      Style::default()
+        .fg(Color::LightYellow)
+        .add_modifier(Modifier::BOLD),
+    ),
+    Span::raw("Navigate • "),
+    Span::styled(
+      "c ",
+      Style::default()
+        .fg(Color::LightYellow)
+        .add_modifier(Modifier::BOLD),
+    ),
+    Span::raw("Copy • "),
+    Span::styled(
+      "d ",
+      Style::default()
+        .fg(Color::LightYellow)
+        .add_modifier(Modifier::BOLD),
+    ),
+    Span::raw("Delete • "),
+    Span::styled(
+      "ESC ",
+      Style::default()
+        .fg(Color::LightYellow)
+        .add_modifier(Modifier::BOLD),
+    ),
+    Span::raw("Back • "),
+    Span::styled(
+      "l ",
+      Style::default()
+        .fg(Color::LightYellow)
+        .add_modifier(Modifier::BOLD),
+    ),
+    Span::raw("Logout"),
+  ]);
+
+  let help_widget = Paragraph::new(help)
     .block(
       Block::default()
         .borders(Borders::ALL)
-        .border_type(BorderType::Rounded),
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(Color::DarkGray)),
     )
     .alignment(Alignment::Center)
-    .style(Style::default().fg(Color::Gray));
+    .style(Style::default().fg(Color::White));
 
-  f.render_widget(help_widget, help_area);
+  f.render_widget(help_widget, chunks[2]);
 }
 
-fn draw_add_secret(f: &mut Frame, app: &TuiApp, area: Rect) {
+pub fn draw_add_secret(f: &mut Frame, app: &TuiApp, area: Rect) {
   let chunks = Layout::default()
     .direction(Direction::Vertical)
-    .constraints([Constraint::Min(5), Constraint::Length(4)])
+    .constraints([Constraint::Min(8), Constraint::Length(4)])
     .split(area);
 
-  let input_area = chunks[0];
-  let help_area = chunks[1];
-
-  let input_text = match app.add_step {
-    AddStep::Type => format!("Type: {}", app.add_type),
-    AddStep::Data => format!("Data: {}", app.add_data),
-  };
-
-  let display_text = if app.input_mode == InputMode::Editing {
-    match app.add_step {
-      AddStep::Type => format!("Type: {}{}", app.add_type, "█"),
-      AddStep::Data => format!("Data: {}{}", app.add_data, "█"),
-    }
-  } else {
-    input_text.clone()
-  };
-
-  let title = match app.add_step {
-    AddStep::Type => "Add Secret - Enter Type",
-    AddStep::Data => "Add Secret - Enter Data",
-  };
-
-  let input_widget = Paragraph::new(display_text)
-    .block(
-      Block::default()
-        .borders(Borders::ALL)
-        .title(title)
-        .border_type(BorderType::Rounded),
-    )
-    .style(match app.input_mode {
-      InputMode::Editing => Style::default().fg(Color::Yellow),
-      InputMode::Normal => Style::default(),
-    })
-    .wrap(Wrap { trim: true })
-    .alignment(Alignment::Left);
-
-  f.render_widget(input_widget, input_area);
-
-  let help_text = if app.input_mode == InputMode::Editing {
-    Line::from(vec![
-      Span::styled("TAB", Style::default().add_modifier(Modifier::BOLD)),
-      Span::raw(" Switch field • "),
-      Span::styled("ENTER", Style::default().add_modifier(Modifier::BOLD)),
-      Span::raw(" Submit • "),
-      Span::styled("ESC", Style::default().add_modifier(Modifier::BOLD)),
-      Span::raw(" Cancel"),
-    ])
-  } else {
-    Line::from(vec![
-      Span::styled("e", Style::default().add_modifier(Modifier::BOLD)),
-      Span::raw(" Edit • "),
-      Span::styled("TAB", Style::default().add_modifier(Modifier::BOLD)),
-      Span::raw(" Switch field • "),
-      Span::styled("ENTER", Style::default().add_modifier(Modifier::BOLD)),
-      Span::raw(" Submit • "),
-      Span::styled("ESC", Style::default().add_modifier(Modifier::BOLD)),
-      Span::raw(" Back to menu"),
-    ])
-  };
-
-  let field_indicator = match app.add_step {
-    AddStep::Type => "(currently editing: Type field)",
-    AddStep::Data => "(currently editing: Data field)",
-  };
-
-  let help_widget = Paragraph::new(vec![
-    Line::from(help_text),
-    Line::from(""),
-    Line::from(Span::styled(
-      field_indicator,
+  let highlight = |active: bool| {
+    if active {
       Style::default()
-        .fg(Color::Cyan)
-        .add_modifier(Modifier::ITALIC),
-    )),
-  ])
+        .fg(Color::Yellow)
+        .add_modifier(Modifier::BOLD)
+    } else {
+      Style::default()
+    }
+  };
+
+  let make_field = |label: &str, val: &str, field: AddField| {
+    let display = if val.is_empty() && app.add_field != field {
+      format!(" {} ", label)
+    } else if app.add_field == field {
+      format!("{}█", val) 
+    } else {
+      val.to_string()
+    };
+
+    let block = Block::default()
+      .borders(Borders::ALL)
+      .title(label.to_string())
+      .title_alignment(ratatui::layout::Alignment::Center)
+      .border_style(if app.add_field == field {
+        Style::default()
+          .fg(Color::LightYellow)
+          .add_modifier(Modifier::BOLD)
+      } else {
+        Style::default().fg(Color::DarkGray)
+      })
+      .border_type(BorderType::Rounded);
+
+    (
+      field,
+      Paragraph::new(display)
+        .style(highlight(app.add_field == field))
+        .block(block),
+    )
+  };
+
+  let mut field_widgets = Vec::new();
+
+  field_widgets.push(make_field(
+    "Kind: Password/Note/Card",
+    match app.add_kind {
+      AddKind::Password => "Password",
+      AddKind::Note => "Note",
+      AddKind::Card => "Card",
+    },
+    AddField::Kind,
+  ));
+
+  match app.add_kind {
+    AddKind::Password => {
+      field_widgets.push(make_field("Title", &app.title, AddField::Title));
+      field_widgets.push(make_field("Login", &app.field1, AddField::Field1));
+      field_widgets.push(make_field("Password", &app.field2, AddField::Field2));
+      field_widgets.push(make_field("URL", &app.field3, AddField::Field3));
+    }
+    AddKind::Note => {
+      field_widgets.push(make_field("Title", &app.title, AddField::Title));
+      field_widgets.push(make_field("Content", &app.field1, AddField::Field1));
+    }
+    AddKind::Card => {
+      field_widgets.push(make_field("Title", &app.title, AddField::Title));
+      field_widgets.push(make_field("Holder", &app.field1, AddField::Field1));
+      field_widgets.push(make_field("Number", &app.field2, AddField::Field2));
+      field_widgets.push(make_field("Expiry", &app.field3, AddField::Field3));
+      field_widgets.push(make_field("CVV", &app.field4, AddField::Field4));
+    }
+  }
+
+  let field_count = field_widgets.len() as u16;
+  let spacing = 1;
+  let block_height = 3;
+  let total_height = (block_height + spacing) * field_count - spacing;
+
+  let field_chunks: Vec<Rect> = Layout::default()
+    .direction(Direction::Vertical)
+    .constraints(
+      std::iter::once(Constraint::Length((chunks[0].height - total_height) / 2))
+        .chain(
+          std::iter::repeat_with(|| Constraint::Length(block_height)).take(field_count as usize),
+        )
+        .collect::<Vec<_>>(),
+    )
+    .split(chunks[0])
+    .iter()
+    .skip(1)
+    .copied()
+    .collect();
+
+  for ((_, widget), rect) in field_widgets.into_iter().zip(field_chunks) {
+    f.render_widget(widget, rect);
+  }
+
+  let help = Paragraph::new(Line::from(vec![
+    Span::styled("TAB ", Style::default().add_modifier(Modifier::BOLD)),
+    Span::raw("Next field • "),
+    Span::styled("←/→ ", Style::default().add_modifier(Modifier::BOLD)),
+    Span::raw("Change Kind • "),
+    Span::styled("ENTER ", Style::default().add_modifier(Modifier::BOLD)),
+    Span::raw("Save • "),
+    Span::styled("ESC ", Style::default().add_modifier(Modifier::BOLD)),
+    Span::raw("Cancel"),
+  ]))
   .block(
     Block::default()
       .borders(Borders::ALL)
       .border_type(BorderType::Rounded),
   )
-  .alignment(Alignment::Center)
+  .alignment(ratatui::layout::Alignment::Center)
   .style(Style::default().fg(Color::Gray));
 
-  f.render_widget(help_widget, help_area);
+  f.render_widget(help, chunks[1]);
 }
 
 fn draw_auth(f: &mut Frame, app: &TuiApp, area: Rect) {
-  let title = match app.screen {
-    Screen::Login => "Login",
-    Screen::Register => "Register",
-    _ => unreachable!(),
-  };
-
   let centered_area = Layout::default()
     .direction(Direction::Horizontal)
     .constraints([
@@ -730,10 +548,6 @@ fn draw_auth(f: &mut Frame, app: &TuiApp, area: Rect) {
     .direction(Direction::Vertical)
     .constraints([Constraint::Min(5), Constraint::Length(3)])
     .split(content_area);
-
-  let active = Style::default()
-    .fg(Color::LightYellow)
-    .add_modifier(Modifier::BOLD);
 
   let username_display = if app.login_step == LoginStep::Username {
     format!("{}█", app.username)
@@ -920,39 +734,46 @@ fn draw_auth(f: &mut Frame, app: &TuiApp, area: Rect) {
   f.render_widget(help_widget, chunks[1]);
 }
 
-fn draw_notification(f: &mut Frame, app: &TuiApp) {
+pub fn draw_notification(f: &mut Frame, app: &TuiApp) {
   let Some((msg, _)) = &app.notification else {
     return;
   };
 
-  let (border, bg) = if msg.starts_with("SUCCESS") {
-    (Color::Green, Color::DarkGray)
-  } else if msg.starts_with("ERROR") {
-    (Color::Red, Color::Black)
-  } else {
-    (Color::Yellow, Color::Black)
-  };
+  let size = f.size();
 
-  let area = centered_rect(60, 20, f.size());
+  let width = msg.len() as u16 + 6;
+  let height = 3;
+
+  let area = Rect {
+    x: size.width.saturating_sub(width + 2),
+    y: 1,
+    width,
+    height,
+  };
 
   let block = Block::default()
     .borders(Borders::ALL)
-    .border_type(BorderType::Thick)
-    .border_style(Style::default().fg(border))
-    .style(Style::default().bg(bg))
-    .title("Notification");
+    .border_type(BorderType::Rounded)
+    .border_style(
+      Style::default()
+        .fg(Color::Yellow)
+        .add_modifier(Modifier::BOLD),
+    )
+    .style(Style::default().bg(Color::Black));
+
+  let inner = block.inner(area);
 
   let text = Paragraph::new(msg.clone())
     .alignment(Alignment::Center)
+    .wrap(Wrap { trim: true })
     .style(
       Style::default()
         .fg(Color::White)
         .add_modifier(Modifier::BOLD),
-    )
-    .wrap(Wrap { trim: true });
+    );
 
   f.render_widget(block, area);
-  f.render_widget(text, area);
+  f.render_widget(text, inner);
 }
 
 pub fn draw_master_password(f: &mut Frame, app: &TuiApp) {

@@ -1,4 +1,4 @@
-use crate::tui::app::{InputMode, Screen, TuiApp};
+use crate::tui::app::{AddField, AddKind, InputMode, Screen, TuiApp};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
 pub fn handle_key(app: &mut TuiApp, key: KeyEvent) {
@@ -6,14 +6,13 @@ pub fn handle_key(app: &mut TuiApp, key: KeyEvent) {
     return;
   }
 
-  if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
-    app.should_quit = true;
-    app.logout();
-    return;
-  }
-
   if key.modifiers.contains(KeyModifiers::CONTROL) {
     match key.code {
+      KeyCode::Char('c') => {
+        app.should_quit = true;
+        app.logout();
+        return;
+      }
       KeyCode::Char('l') => {
         app.screen = Screen::Login;
         app.input_mode = InputMode::Editing;
@@ -49,12 +48,38 @@ fn handle_normal(app: &mut TuiApp, key: KeyEvent) {
       };
     }
     KeyCode::Char('s') if app.screen != Screen::MasterPassword => app.sync_secrets(),
-    KeyCode::Char('v') if app.screen != Screen::MasterPassword => app.view_secrets(),
-    KeyCode::Char('a') if app.screen != Screen::MasterPassword => app.enter_add_secret(),
+    KeyCode::Char('v') if app.screen != Screen::MasterPassword => app.sync_secrets(),
+    KeyCode::Char('a') if app.screen != Screen::MasterPassword => {
+      app.enter_add_secret();
+      app.input_mode = InputMode::Editing;
+    }
     KeyCode::Char('c') if app.screen == Screen::Secrets => copy_to_clipboard(app),
 
     KeyCode::Char('d') if app.screen == Screen::Secrets => {
       app.delete_selected();
+    }
+
+    KeyCode::Up if app.screen == Screen::Menu => {
+      if app.selected > 0 {
+        app.selected -= 1;
+      }
+    }
+
+    KeyCode::Down if app.screen == Screen::Menu => {
+      if app.selected < 4 {
+        app.selected += 1;
+      }
+    }
+
+    KeyCode::Enter if app.screen == Screen::Menu => {
+      match app.selected {
+        0 => app.sync_secrets(),
+        1 => app.enter_add_secret(),
+        2 => app.sync_secrets(), 
+        3 => app.logout(),
+        4 => app.should_quit = true,
+        _ => {}
+      }
     }
 
     KeyCode::Up => app.prev(),
@@ -73,12 +98,31 @@ fn handle_editing(app: &mut TuiApp, key: KeyEvent) {
     KeyCode::Enter => app.submit(),
     KeyCode::Backspace => app.backspace(),
     KeyCode::Char(c) => app.push_char(c),
+    KeyCode::Left => {
+      if app.screen == Screen::AddSecret && app.add_field == AddField::Kind {
+        app.add_kind = match app.add_kind {
+          AddKind::Password => AddKind::Card,
+          AddKind::Note => AddKind::Password,
+          AddKind::Card => AddKind::Note,
+        };
+      }
+    }
+    KeyCode::Right => {
+      if app.screen == Screen::AddSecret && app.add_field == AddField::Kind {
+        app.add_kind = match app.add_kind {
+          AddKind::Password => AddKind::Note,
+          AddKind::Note => AddKind::Card,
+          AddKind::Card => AddKind::Password,
+        };
+      }
+    }
     _ => {}
   }
 }
 
 fn copy_to_clipboard(app: &mut TuiApp) {
   use super::clipboard::copy;
+  use crate::core::models::SecretPayload;
 
   if app.secrets.is_empty() {
     app.notify_error("No secrets to copy");
@@ -86,7 +130,14 @@ fn copy_to_clipboard(app: &mut TuiApp) {
   }
 
   let secret = &app.secrets[app.selected];
-  match copy(secret.data.clone()) {
+
+  let text = match &secret.payload {
+    SecretPayload::Password { password, .. } => password.clone(),
+    SecretPayload::Note { content, .. } => content.clone(),
+    SecretPayload::Card { number, .. } => number.clone(),
+  };
+
+  match copy(text) {
     Ok(_) => app.notify_success("Copied to clipboard"),
     Err(e) => app.notify_error(format!("Clipboard error: {}", e)),
   }

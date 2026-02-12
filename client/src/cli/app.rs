@@ -1,7 +1,8 @@
+use anyhow::Result;
 use clap::{Parser, Subcommand};
 
-use crate::core::{GopherApp, Secret};
-use anyhow::Result;
+use crate::core::GopherApp;
+use crate::core::models::{DecryptedSecret, SecretPayload};
 
 pub struct CliApp {
   pub inner: GopherApp,
@@ -19,15 +20,22 @@ impl CliApp {
   }
 
   pub async fn login(&mut self, login: String, pass: String) -> Result<()> {
-    self.inner.login(login, pass).await
+    self.inner.login(login.clone(), pass.clone()).await?;
+    self.inner.set_current_user(login);
+    self.inner.set_master_password(pass);
+    Ok(())
   }
 
-  pub async fn sync(&self) -> Result<Vec<Secret>> {
+  pub async fn add_secret(&self, payload: SecretPayload) -> Result<()> {
+    self.inner.add_secret(payload).await
+  }
+
+  pub async fn sync(&self) -> Result<Vec<DecryptedSecret>> {
     self.inner.sync_and_decrypt().await
   }
 
-  pub async fn add_secret(&self, sec_type: String, data: String) -> Result<()> {
-    self.inner.add_secret(sec_type, data).await
+  pub async fn logout(&mut self) -> Result<()> {
+    self.inner.logout().await
   }
 
   pub async fn delete_secret(&self, id: String) -> Result<()> {
@@ -60,14 +68,54 @@ pub enum Commands {
     pass: String,
   },
   Add {
-    #[arg(short = 't', long, default_value = "text")]
-    type_val: String,
-    #[arg(short, long)]
-    data: String,
+    #[command(subcommand)]
+    secret_type: SecretTypeCommands,
   },
   Sync,
   Delete {
     #[arg(short, long)]
     id: String,
   },
+  Logout,
+}
+
+#[derive(Subcommand)]
+pub enum SecretTypeCommands {
+  Password(PasswordArgs),
+  Note(NoteArgs),
+  Card(CardArgs),
+}
+
+#[derive(clap::Args)]
+pub struct PasswordArgs {
+  #[arg(short, long)]
+  pub title: String,
+  #[arg(short, long)]
+  pub login: String,
+  #[arg(short, long)]
+  pub password: String,
+  #[arg(short, long)]
+  pub url: Option<String>,
+}
+
+#[derive(clap::Args)]
+pub struct NoteArgs {
+  #[arg(short, long)]
+  pub title: String,
+  #[arg(short, long)]
+  pub content: String,
+}
+
+#[derive(clap::Args)]
+pub struct CardArgs {
+  #[arg(short, long)]
+  pub title: String,
+  #[arg(short, long)]
+  pub holder: String,
+  #[arg(short, long)]
+  pub number: String,
+  #[arg(short, long)]
+  pub expiry: String,
+  #[arg(short, long)]
+  pub cvv: String,
 }
