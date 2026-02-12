@@ -21,6 +21,8 @@ clap = { version = "4.0", features = ["derive"], optional = true }
 ratatui = { version = "0.26", optional = true }
 crossterm = { version = "0.27", optional = true }
 arboard = { version = "3.3", optional = true }
+rpassword = "7.4.0"
+jsonwebtoken = "10.3.0"
 
 [features]
 default = ["cli", "tui"]  

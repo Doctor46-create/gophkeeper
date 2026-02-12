@@ -35,11 +35,7 @@ pub fn handle_key(app: &mut TuiApp, key: KeyEvent) {
 
 fn handle_normal(app: &mut TuiApp, key: KeyEvent) {
   match key.code {
-    KeyCode::Char('l') => {
-      if app.screen == Screen::Menu {
-        app.logout();
-      }
-    }
+    KeyCode::Char('l') if app.screen != Screen::MasterPassword => {app.logout()},
     KeyCode::Esc => {
       app.input_mode = InputMode::Normal;
 
@@ -48,11 +44,12 @@ fn handle_normal(app: &mut TuiApp, key: KeyEvent) {
         Screen::Register => Screen::Register,
         Screen::Login => Screen::Login,
         Screen::Menu => Screen::Menu,
+        Screen::MasterPassword => Screen::MasterPassword,
       };
     }
-    KeyCode::Char('s') => app.sync_secrets(),
-    KeyCode::Char('v') => app.view_secrets(),
-    KeyCode::Char('a') => app.enter_add_secret(),
+    KeyCode::Char('s') if app.screen != Screen::MasterPassword => {app.sync_secrets()},
+    KeyCode::Char('v') if app.screen != Screen::MasterPassword => {app.view_secrets()},
+    KeyCode::Char('a') if app.screen != Screen::MasterPassword => {app.enter_add_secret()},
     KeyCode::Char('c') if app.screen == Screen::Secrets => copy_to_clipboard(app),
 
     KeyCode::Char('d') if app.screen == Screen::Secrets => {
@@ -83,13 +80,13 @@ fn copy_to_clipboard(app: &mut TuiApp) {
   use super::clipboard::copy;
 
   if app.secrets.is_empty() {
-    app.show_error("No secrets to copy");
+    app.notify_error("No secrets to copy");
     return;
   }
 
   let secret = &app.secrets[app.selected];
   match copy(secret.data.clone()) {
-    Ok(_) => app.show_success("Copied to clipboard"),
-    Err(e) => app.show_error(format!("Clipboard error: {}", e)),
+    Ok(_) => app.notify_success("Copied to clipboard"),
+    Err(e) => app.notify_error(format!("Clipboard error: {}", e)),
   }
 }

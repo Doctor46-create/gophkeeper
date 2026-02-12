@@ -71,6 +71,7 @@ fn draw_body(f: &mut Frame, app: &TuiApp, area: Rect) {
     Screen::Secrets => draw_secrets(f, app, area),
     Screen::AddSecret => draw_add_secret(f, app, area),
     Screen::Login | Screen::Register => draw_auth(f, app, area),
+    Screen::MasterPassword => draw_master_password(f, app),
   }
 }
 
@@ -266,7 +267,7 @@ fn draw_helper_widget(f: &mut Frame, app: &TuiApp, area: Rect) {
     Line::from(vec![
       Span::raw("User: "),
       Span::styled(
-        app.current_user.as_deref().unwrap_or("Not logged in"),
+        app.api.get_current_user().unwrap_or("Not logged in"),
         Style::default().fg(Color::Cyan),
       ),
     ]),
@@ -333,7 +334,9 @@ fn draw_secrets(f: &mut Frame, app: &TuiApp, area: Rect) {
       Span::styled("d", Style::default().add_modifier(Modifier::BOLD)),
       Span::raw(" Delete • "),
       Span::styled("ESC", Style::default().add_modifier(Modifier::BOLD)),
-      Span::raw(" Back"),
+      Span::raw(" Back • "),
+      Span::styled("l", Style::default().add_modifier(Modifier::BOLD)),
+      Span::raw(" Logout"),
     ])
   } else {
     Line::from("No secrets found. Press 'ESC' to go back.")
@@ -450,65 +453,109 @@ fn draw_auth(f: &mut Frame, app: &TuiApp, area: Rect) {
     _ => unreachable!(),
   };
 
-  let highlight = Style::default()
-    .fg(Color::Cyan)
+  let active = Style::default()
+    .fg(Color::Yellow)
     .add_modifier(Modifier::BOLD);
 
   let normal = Style::default().fg(Color::Gray);
 
+  let username_style = if app.login_step == LoginStep::Username {
+    active
+  } else {
+    normal
+  };
+
+  let username_value = if app.login_step == LoginStep::Username {
+    format!("{}█", app.username)
+  } else {
+    app.username.clone()
+  };
+
   let username = Line::from(vec![
-    Span::raw("Username: "),
-    Span::styled(
-      &app.username,
-      if app.login_step == LoginStep::Username {
-        highlight
-      } else {
-        normal
-      },
-    ),
+    Span::styled("Username: ", Style::default().fg(Color::White)),
+    Span::styled(username_value, username_style),
   ]);
 
+  let password_style = if app.login_step == LoginStep::Password {
+    active
+  } else {
+    normal
+  };
+
   let password_mask = "*".repeat(app.password.len());
+  let password_value = if app.login_step == LoginStep::Password {
+    format!("{}█", password_mask)
+  } else {
+    password_mask
+  };
+
   let password = Line::from(vec![
-    Span::raw("Password: "),
-    Span::styled(
-      password_mask,
-      if app.login_step == LoginStep::Password {
-        highlight
-      } else {
-        normal
-      },
-    ),
+    Span::styled("Password: ", Style::default().fg(Color::White)),
+    Span::styled(password_value, password_style),
   ]);
 
   let mut lines = vec![username, password];
 
   if app.screen == Screen::Register {
+    let confirm_style = if app.login_step == LoginStep::ConfirmPassword {
+      active
+    } else {
+      normal
+    };
+
     let confirm_mask = "*".repeat(app.confirm_password.len());
+    let confirm_value = if app.login_step == LoginStep::ConfirmPassword {
+      format!("{}█", confirm_mask)
+    } else {
+      confirm_mask
+    };
+
     lines.push(Line::from(vec![
-      Span::raw("Confirm:  "),
-      Span::styled(
-        confirm_mask,
-        if app.login_step == LoginStep::ConfirmPassword {
-          highlight
-        } else {
-          normal
-        },
-      ),
+      Span::styled("Confirm:  ", Style::default().fg(Color::White)),
+      Span::styled(confirm_value, confirm_style),
     ]));
   }
 
   lines.push(Line::raw(""));
-  lines.push(Line::styled(
-    "Ctrl +r: register | Ctrl +l: login | Tab: next field | Enter: submit | Ctrl + c: quit",
-    Style::default().fg(Color::DarkGray),
-  ));
 
-  let p = Paragraph::new(lines)
-    .block(Block::default().borders(Borders::ALL).title(title))
+  let chunks = Layout::default()
+    .direction(Direction::Vertical)
+    .constraints([Constraint::Min(5), Constraint::Length(3)])
+    .split(area);
+
+  let auth_block = Block::default()
+    .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
+    .title(title);
+
+  let auth_paragraph = Paragraph::new(lines)
+    .block(auth_block)
     .wrap(Wrap { trim: true });
 
-  f.render_widget(p, area);
+  f.render_widget(auth_paragraph, chunks[0]);
+
+  let help_text = Line::from(vec![
+    Span::styled("Ctrl+r", Style::default().add_modifier(Modifier::BOLD)),
+    Span::raw(" register • "),
+    Span::styled("Ctrl+l", Style::default().add_modifier(Modifier::BOLD)),
+    Span::raw(" login • "),
+    Span::styled("Tab", Style::default().add_modifier(Modifier::BOLD)),
+    Span::raw(" next • "),
+    Span::styled("Enter", Style::default().add_modifier(Modifier::BOLD)),
+    Span::raw(" submit • "),
+    Span::styled("Ctrl+c", Style::default().add_modifier(Modifier::BOLD)),
+    Span::raw(" quit"),
+  ]);
+
+  let help_widget = Paragraph::new(help_text)
+    .block(
+      Block::default()
+        .borders(Borders::LEFT | Borders::RIGHT | Borders::BOTTOM)
+        .border_type(BorderType::Rounded),
+    )
+    .alignment(Alignment::Center)
+    .style(Style::default().fg(Color::Gray));
+
+  f.render_widget(help_widget, chunks[1]);
 }
 
 fn draw_notification(f: &mut Frame, app: &TuiApp) {
@@ -544,4 +591,171 @@ fn draw_notification(f: &mut Frame, app: &TuiApp) {
 
   f.render_widget(block, area);
   f.render_widget(text, area);
+}
+
+pub fn draw_master_password(f: &mut Frame, app: &TuiApp) {
+  let size = f.size();
+
+  let compact_area = Layout::default()
+    .direction(Direction::Vertical)
+    .constraints([
+      Constraint::Length(10), 
+      Constraint::Min(0),
+    ])
+    .split(size);
+
+  let centered_area = Layout::default()
+    .direction(Direction::Horizontal)
+    .constraints([
+      Constraint::Percentage(30),
+      Constraint::Percentage(40),
+      Constraint::Percentage(30),
+    ])
+    .split(compact_area[0]);
+
+  let area = centered_area[1];
+
+  let chunks = Layout::default()
+    .direction(Direction::Vertical)
+    .constraints([
+      Constraint::Length(5), 
+      Constraint::Length(4), 
+    ])
+    .split(area);
+
+  
+  let info_text = vec![
+    Line::from(vec![Span::styled(
+      "✓ You are already logged in.",
+      Style::default()
+        .fg(Color::Green)
+        .add_modifier(Modifier::BOLD),
+    )]),
+    Line::from(""),
+    Line::from(vec![
+      Span::styled("Enter ", Style::default().fg(Color::White)),
+      Span::styled(
+        "MASTER PASSWORD",
+        Style::default()
+          .fg(Color::Yellow)
+          .add_modifier(Modifier::BOLD),
+      ),
+      Span::styled(" to decrypt secrets.", Style::default().fg(Color::White)),
+    ]),
+  ];
+
+  let info = Paragraph::new(info_text)
+    .wrap(Wrap { trim: true })
+    .block(
+      Block::default()
+        .borders(Borders::ALL)
+        .title(" Session Active ")
+        .title_alignment(Alignment::Center)
+        .border_style(Style::default().fg(Color::Green)),
+    )
+    .alignment(Alignment::Center);
+
+  f.render_widget(info, chunks[0]);
+
+    let password_section = Layout::default()
+    .direction(Direction::Vertical)
+    .constraints([
+      Constraint::Length(1), 
+      Constraint::Length(3), 
+    ])
+    .split(chunks[1]);
+
+  let mode_text = match app.input_mode {
+    InputMode::Normal => Span::styled(
+      "LOCKED",
+      Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+    ),
+    InputMode::Editing => Span::styled(
+      "EDITING",
+      Style::default()
+        .fg(Color::LightGreen)
+        .add_modifier(Modifier::BOLD),
+    ),
+  };
+
+  let helper = if app.input_mode == InputMode::Normal {
+    Line::from(vec![
+      Span::styled("Mode: ", Style::default().fg(Color::White)),
+      mode_text,
+      Span::styled("  •  ", Style::default().fg(Color::White)),
+      Span::styled(
+        "E",
+        Style::default()
+          .fg(Color::LightYellow)
+          .add_modifier(Modifier::BOLD),
+      ),
+      Span::styled(": edit  ", Style::default().fg(Color::White)),
+      Span::styled(
+        "Ctrl+c",
+        Style::default()
+          .fg(Color::LightRed)
+          .add_modifier(Modifier::BOLD),
+      ),
+      Span::styled(": quit", Style::default().fg(Color::White)),
+    ])
+  } else {
+    Line::from(vec![
+      Span::styled("Mode: ", Style::default().fg(Color::White)),
+      mode_text,
+      Span::styled("  •  ", Style::default().fg(Color::White)),
+      Span::styled(
+        "Enter",
+        Style::default()
+          .fg(Color::LightGreen)
+          .add_modifier(Modifier::BOLD),
+      ),
+      Span::styled(": confirm  ", Style::default().fg(Color::White)),
+      Span::styled(
+        "Esc",
+        Style::default()
+          .fg(Color::LightYellow)
+          .add_modifier(Modifier::BOLD),
+      ),
+      Span::styled(": cancel", Style::default().fg(Color::White)),
+    ])
+  };
+
+  let mode_indicator = Paragraph::new(helper).block(Block::default());
+
+  f.render_widget(mode_indicator, password_section[0]);
+
+   let masked = "*".repeat(app.password.len());
+
+  let display_password = if app.password.is_empty() && app.input_mode == InputMode::Normal {
+    String::from(" your password ")
+  } else if app.password.is_empty() && app.input_mode == InputMode::Editing {
+    String::from(" ") 
+  } else {
+    masked
+  };
+
+  let input = if app.password.is_empty() && app.input_mode == InputMode::Normal {
+    Paragraph::new(display_password)
+      .style(Style::default().fg(Color::DarkGray))
+      .block(
+        Block::default()
+          .borders(Borders::ALL)
+          .border_style(Style::default().fg(Color::DarkGray)),
+      )
+  } else {
+    Paragraph::new(display_password)
+      .style(Style::default().fg(Color::Yellow))
+      .block(
+        Block::default()
+          .borders(Borders::ALL)
+          .border_style(Style::default().fg(Color::Yellow)),
+      )
+  };
+
+  f.render_widget(input, password_section[1]);
+  if app.input_mode == InputMode::Editing {
+    let cursor_x = password_section[1].x + 1 + app.password.len() as u16;
+    let cursor_y = password_section[1].y + 1;
+    f.set_cursor(cursor_x, cursor_y);
+  }
 }

@@ -1,9 +1,10 @@
-use crate::core::GopherApp;
-use anyhow::Result;
 use clap::{Parser, Subcommand};
 
+use crate::core::{GopherApp, Secret};
+use anyhow::Result;
+
 pub struct CliApp {
-  inner: GopherApp,
+  pub inner: GopherApp,
 }
 
 impl CliApp {
@@ -21,17 +22,12 @@ impl CliApp {
     self.inner.login(login, pass).await
   }
 
-  pub async fn add_secret(
-    &mut self,
-    sec_type: String,
-    data: String,
-    master_pass: String,
-  ) -> Result<()> {
-    self.inner.add_secret(sec_type, data, master_pass).await
+  pub async fn sync(&self) -> Result<Vec<Secret>> {
+    self.inner.sync_and_decrypt().await
   }
 
-  pub async fn sync_and_decrypt(&self, master_pass: String) -> Result<Vec<crate::core::Secret>> {
-    self.inner.sync_and_decrypt(master_pass).await
+  pub async fn add_secret(&self, sec_type: String, data: String) -> Result<()> {
+    self.inner.add_secret(sec_type, data).await
   }
 
   pub async fn delete_secret(&self, id: String) -> Result<()> {
@@ -68,13 +64,8 @@ pub enum Commands {
     type_val: String,
     #[arg(short, long)]
     data: String,
-    #[arg(short, long)]
-    pass: String,
   },
-  Sync {
-    #[arg(short, long)]
-    pass: String,
-  },
+  Sync,
   Delete {
     #[arg(short, long)]
     id: String,

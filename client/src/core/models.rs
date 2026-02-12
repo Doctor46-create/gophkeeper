@@ -26,3 +26,9 @@ pub struct Secret {
 pub struct SyncRequest {
   pub secrets: Vec<Secret>,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct Claims {
+  pub login: String,
+  exp: usize,
+}

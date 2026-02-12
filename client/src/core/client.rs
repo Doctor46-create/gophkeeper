@@ -27,7 +27,7 @@ impl GopherClient {
 
   pub async fn load_token() -> Result<String> {
     let home = home::home_dir().context("Missing HOME directory")?;
-    let token_path = home.join(".gopher_token");
+    let token_path = home.join(".goph_token");
 
     let mut file = fs::File::open(&token_path)
       .await
@@ -35,7 +35,19 @@ impl GopherClient {
 
     let mut token_content = String::new();
     file.read_to_string(&mut token_content).await?;
-    Ok(token_content)
+
+    Ok(token_content.trim().to_string())
+  }
+
+  pub async fn delete_token() -> Result<()> {
+    let home = home::home_dir().context("Missing HOME directory")?;
+    let token_path = home.join(".goph_token");
+
+    if token_path.exists() {
+      fs::remove_file(token_path).await?;
+    }
+
+    Ok(())
   }
 
   pub async fn register(&self, login: &str, password: &str) -> Result<()> {
