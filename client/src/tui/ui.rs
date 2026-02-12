@@ -268,70 +268,22 @@ pub fn draw_secrets(f: &mut Frame, app: &TuiApp, area: Rect) {
       .fg(Color::LightYellow)
       .add_modifier(Modifier::BOLD);
 
-    match &secret.payload {
-      SecretPayload::Password {
-        title,
-        login,
-        password,
-        url,
-      } => {
-        lines.push(Line::from(vec![
-          Span::styled("Title: ", label_style),
-          Span::raw(title),
-        ]));
-        lines.push(Line::from(vec![
-          Span::styled("Login: ", label_style),
-          Span::raw(login),
-        ]));
-        lines.push(Line::from(vec![
-          Span::styled("Password: ", label_style),
-          Span::raw(password),
-        ]));
-        if let Some(u) = url {
-          lines.push(Line::from(vec![
-            Span::styled("URL: ", label_style),
-            Span::raw(u),
-          ]));
-        }
-      }
+    let fields = app.current_secret_fields();
 
-      SecretPayload::Note { title, content } => {
-        lines.push(Line::from(vec![
-          Span::styled("Title: ", label_style),
-          Span::raw(title),
-        ]));
-        lines.push(Line::from(""));
-        lines.push(Line::from(content.clone()));
-      }
+    for (i, (label, value)) in fields.iter().enumerate() {
+      let style = if i == app.detail_selected {
+        Style::default()
+          .fg(Color::Black)
+          .bg(Color::LightYellow)
+          .add_modifier(Modifier::BOLD)
+      } else {
+        Style::default().fg(Color::White)
+      };
 
-      SecretPayload::Card {
-        title,
-        holder,
-        number,
-        expiry,
-        cvv,
-      } => {
-        lines.push(Line::from(vec![
-          Span::styled("Title: ", label_style),
-          Span::raw(title),
-        ]));
-        lines.push(Line::from(vec![
-          Span::styled("Holder: ", label_style),
-          Span::raw(holder),
-        ]));
-        lines.push(Line::from(vec![
-          Span::styled("Number: ", label_style),
-          Span::raw(number),
-        ]));
-        lines.push(Line::from(vec![
-          Span::styled("Expiry: ", label_style),
-          Span::raw(expiry),
-        ]));
-        lines.push(Line::from(vec![
-          Span::styled("CVV: ", label_style),
-          Span::raw(cvv),
-        ]));
-      }
+      lines.push(Line::from(vec![
+        Span::styled(format!("{}: ", label), Style::default().fg(Color::DarkGray)),
+        Span::styled(value.clone(), style),
+      ]));
     }
 
     lines.push(Line::from(""));
@@ -358,43 +310,51 @@ pub fn draw_secrets(f: &mut Frame, app: &TuiApp, area: Rect) {
     f.render_widget(detail, chunks[1]);
   }
 
-  let help = Line::from(vec![
+let help = Line::from(vec![
     Span::styled(
-      "↑/↓ ",
-      Style::default()
-        .fg(Color::LightYellow)
-        .add_modifier(Modifier::BOLD),
+        "↑/↓ ",
+        Style::default()
+            .fg(Color::LightYellow)
+            .add_modifier(Modifier::BOLD),
     ),
-    Span::raw("Navigate • "),
+    Span::raw("Navigate Secrets • "),
     Span::styled(
-      "c ",
-      Style::default()
-        .fg(Color::LightYellow)
-        .add_modifier(Modifier::BOLD),
+        "←/→ ",
+        Style::default()
+            .fg(Color::LightYellow)
+            .add_modifier(Modifier::BOLD),
+    ),
+    Span::raw("Navigate Fields • "),
+    Span::styled(
+        "c ",
+        Style::default()
+            .fg(Color::LightYellow)
+            .add_modifier(Modifier::BOLD),
     ),
     Span::raw("Copy • "),
     Span::styled(
-      "d ",
-      Style::default()
-        .fg(Color::LightYellow)
-        .add_modifier(Modifier::BOLD),
+        "d ",
+        Style::default()
+            .fg(Color::LightYellow)
+            .add_modifier(Modifier::BOLD),
     ),
     Span::raw("Delete • "),
     Span::styled(
-      "ESC ",
-      Style::default()
-        .fg(Color::LightYellow)
-        .add_modifier(Modifier::BOLD),
+        "ESC ",
+        Style::default()
+            .fg(Color::LightYellow)
+            .add_modifier(Modifier::BOLD),
     ),
     Span::raw("Back • "),
     Span::styled(
-      "l ",
-      Style::default()
-        .fg(Color::LightYellow)
-        .add_modifier(Modifier::BOLD),
+        "l ",
+        Style::default()
+            .fg(Color::LightYellow)
+            .add_modifier(Modifier::BOLD),
     ),
     Span::raw("Logout"),
-  ]);
+]);
+
 
   let help_widget = Paragraph::new(help)
     .block(
@@ -429,7 +389,7 @@ pub fn draw_add_secret(f: &mut Frame, app: &TuiApp, area: Rect) {
     let display = if val.is_empty() && app.add_field != field {
       format!(" {} ", label)
     } else if app.add_field == field {
-      format!("{}█", val) 
+      format!("{}█", val)
     } else {
       val.to_string()
     };

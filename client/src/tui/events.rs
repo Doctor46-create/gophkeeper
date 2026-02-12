@@ -1,3 +1,4 @@
+use super::clipboard::copy;
 use crate::tui::app::{AddField, AddKind, InputMode, Screen, TuiApp};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
@@ -71,19 +72,28 @@ fn handle_normal(app: &mut TuiApp, key: KeyEvent) {
       }
     }
 
-    KeyCode::Enter if app.screen == Screen::Menu => {
-      match app.selected {
-        0 => app.sync_secrets(),
-        1 => app.enter_add_secret(),
-        2 => app.sync_secrets(), 
-        3 => app.logout(),
-        4 => app.should_quit = true,
-        _ => {}
-      }
-    }
+    KeyCode::Enter if app.screen == Screen::Menu => match app.selected {
+      0 => app.sync_secrets(),
+      1 => app.enter_add_secret(),
+      2 => app.sync_secrets(),
+      3 => app.logout(),
+      4 => app.should_quit = true,
+      _ => {}
+    },
 
     KeyCode::Up => app.prev(),
     KeyCode::Down => app.next(),
+
+    KeyCode::Right if app.screen == Screen::Secrets => {
+      let fields = app.current_secret_fields();
+      if !fields.is_empty() {
+        app.detail_selected = (app.detail_selected + 1).min(fields.len() - 1);
+      }
+    }
+
+    KeyCode::Left if app.screen == Screen::Secrets => {
+      app.detail_selected = app.detail_selected.saturating_sub(1);
+    }
 
     KeyCode::Enter => app.submit(),
     KeyCode::Char('e') => app.input_mode = InputMode::Editing,
@@ -121,23 +131,16 @@ fn handle_editing(app: &mut TuiApp, key: KeyEvent) {
 }
 
 fn copy_to_clipboard(app: &mut TuiApp) {
-  use super::clipboard::copy;
-  use crate::core::models::SecretPayload;
+  let fields = app.current_secret_fields();
 
-  if app.secrets.is_empty() {
-    app.notify_error("No secrets to copy");
+  if fields.is_empty() {
+    app.notify_error("Nothing to copy");
     return;
   }
 
-  let secret = &app.secrets[app.selected];
+  let (_, value) = &fields[app.detail_selected];
 
-  let text = match &secret.payload {
-    SecretPayload::Password { password, .. } => password.clone(),
-    SecretPayload::Note { content, .. } => content.clone(),
-    SecretPayload::Card { number, .. } => number.clone(),
-  };
-
-  match copy(text) {
+  match copy(value.clone()) {
     Ok(_) => app.notify_success("Copied to clipboard"),
     Err(e) => app.notify_error(format!("Clipboard error: {}", e)),
   }

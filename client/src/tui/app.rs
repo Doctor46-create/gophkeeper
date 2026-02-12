@@ -68,6 +68,8 @@ pub struct TuiApp {
   pub field3: String,
   pub field4: String,
 
+  pub detail_selected: usize,
+
   pub notification: Option<(String, Instant)>,
 
   pub should_quit: bool,
@@ -106,6 +108,7 @@ impl TuiApp {
       field2: String::new(),
       field3: String::new(),
       field4: String::new(),
+      detail_selected: 0,
       notification: None,
       should_quit: false,
     })
@@ -274,12 +277,14 @@ impl TuiApp {
   pub fn next(&mut self) {
     if !self.secrets.is_empty() {
       self.selected = (self.selected + 1).min(self.secrets.len() - 1);
+      self.detail_selected = 0;
     }
   }
 
   pub fn prev(&mut self) {
     if !self.secrets.is_empty() {
       self.selected = self.selected.saturating_sub(1);
+      self.detail_selected = 0;
     }
   }
 
@@ -422,5 +427,51 @@ impl TuiApp {
     self.input_mode = InputMode::Normal;
 
     self.notify_success("Master password set");
+  }
+
+  pub fn current_secret_fields(&self) -> Vec<(String, String)> {
+    if let Some(secret) = self.secrets.get(self.selected) {
+      match &secret.payload {
+        SecretPayload::Password {
+          title,
+          login,
+          password,
+          url,
+        } => {
+          let mut fields = vec![
+            ("Title".into(), title.clone()),
+            ("Login".into(), login.clone()),
+            ("Password".into(), password.clone()),
+          ];
+          if let Some(u) = url {
+            fields.push(("URL".into(), u.clone()));
+          }
+          fields
+        }
+        SecretPayload::Note { title, content } => {
+          vec![
+            ("Title".into(), title.clone()),
+            ("Content".into(), content.clone()),
+          ]
+        }
+        SecretPayload::Card {
+          title,
+          holder,
+          number,
+          expiry,
+          cvv,
+        } => {
+          vec![
+            ("Title".into(), title.clone()),
+            ("Holder".into(), holder.clone()),
+            ("Number".into(), number.clone()),
+            ("Expiry".into(), expiry.clone()),
+            ("CVV".into(), cvv.clone()),
+          ]
+        }
+      }
+    } else {
+      vec![]
+    }
   }
 }
