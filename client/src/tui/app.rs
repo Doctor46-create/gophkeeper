@@ -58,33 +58,10 @@ pub struct TuiApp {
 }
 
 impl TuiApp {
-  //pub fn new() -> std::io::Result<Self> {
-  //    Ok(Self {
-  //        screen: Screen::Login,
-  //        input_mode: InputMode::Editing,
-  //        api: GopherApp::new("http://localhost:8080".into()),
-  //        rt: Runtime::new()?,
-  //        secrets: vec![],
-  //        selected: 0,
-  //        username: String::new(),
-  //        password: String::new(),
-  //        confirm_password: String::new(),
-  //        login_step: LoginStep::Username,
-  //        add_type: "password".into(),
-  //        add_data: String::new(),
-  //        add_step: AddStep::Type,
-  //        current_user: None,
-  //        login_time: None,
-  //        notification: None,
-  //        should_quit: false,
-  //    })
-  //}
-
   pub fn new() -> std::io::Result<Self> {
     let mut api = GopherApp::new("http://localhost:8080".into());
     let rt = Runtime::new()?;
 
-    // Try loading token
     let auto_login = rt.block_on(api.try_auto_login()).is_ok();
 
     let screen = if auto_login {
@@ -131,8 +108,6 @@ impl TuiApp {
     })
   }
 
-  /* ---------------- Notifications ---------------- */
-
   pub fn notify_success(&mut self, msg: impl Into<String>) {
     self.notification = Some((
       format!("SUCCESS: {}", msg.into()),
@@ -162,8 +137,6 @@ impl TuiApp {
     }
   }
 
-  /* ---------------- Navigation ---------------- */
-
   pub fn next(&mut self) {
     if !self.secrets.is_empty() {
       self.selected = (self.selected + 1).min(self.secrets.len() - 1);
@@ -175,8 +148,6 @@ impl TuiApp {
       self.selected = self.selected.saturating_sub(1);
     }
   }
-
-  /* ---------------- Auth ---------------- */
 
   pub fn login(&mut self) {
     match self
@@ -232,8 +203,6 @@ impl TuiApp {
 
     self.notify_info("Logged out");
   }
-
-  /* ---------------- Secrets ---------------- */
 
   pub fn view_secrets(&mut self) {
     if self.secrets.is_empty() {
@@ -311,8 +280,6 @@ impl TuiApp {
     self.screen = Screen::AddSecret;
     self.input_mode = InputMode::Editing;
   }
-
-  /* ---------------- Input Handling ---------------- */
 
   pub fn toggle_field(&mut self) {
     match self.screen {

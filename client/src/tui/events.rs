@@ -8,6 +8,7 @@ pub fn handle_key(app: &mut TuiApp, key: KeyEvent) {
 
   if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
     app.should_quit = true;
+    app.logout();
     return;
   }
 
@@ -35,7 +36,7 @@ pub fn handle_key(app: &mut TuiApp, key: KeyEvent) {
 
 fn handle_normal(app: &mut TuiApp, key: KeyEvent) {
   match key.code {
-    KeyCode::Char('l') if app.screen != Screen::MasterPassword => {app.logout()},
+    KeyCode::Char('l') if app.screen != Screen::MasterPassword => app.logout(),
     KeyCode::Esc => {
       app.input_mode = InputMode::Normal;
 
@@ -47,9 +48,9 @@ fn handle_normal(app: &mut TuiApp, key: KeyEvent) {
         Screen::MasterPassword => Screen::MasterPassword,
       };
     }
-    KeyCode::Char('s') if app.screen != Screen::MasterPassword => {app.sync_secrets()},
-    KeyCode::Char('v') if app.screen != Screen::MasterPassword => {app.view_secrets()},
-    KeyCode::Char('a') if app.screen != Screen::MasterPassword => {app.enter_add_secret()},
+    KeyCode::Char('s') if app.screen != Screen::MasterPassword => app.sync_secrets(),
+    KeyCode::Char('v') if app.screen != Screen::MasterPassword => app.view_secrets(),
+    KeyCode::Char('a') if app.screen != Screen::MasterPassword => app.enter_add_secret(),
     KeyCode::Char('c') if app.screen == Screen::Secrets => copy_to_clipboard(app),
 
     KeyCode::Char('d') if app.screen == Screen::Secrets => {

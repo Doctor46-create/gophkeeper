@@ -20,10 +20,6 @@ impl GopherApp {
     }
   }
 
-  // ------------------------
-  // AUTH
-  // ------------------------
-
   pub async fn register(&self, login: String, pass: String) -> Result<()> {
     self.api.register(&login, &pass).await
   }
@@ -80,10 +76,6 @@ impl GopherApp {
   pub fn clear_current_user(&mut self) {
     self.current_user = None
   }
-
-  // ------------------------
-  // DATA
-  // ------------------------
 
   pub async fn sync_and_decrypt(&self) -> Result<Vec<Secret>> {
     let token = self.token.as_ref().context("Not logged in")?;
