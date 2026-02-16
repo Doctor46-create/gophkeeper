@@ -3,7 +3,7 @@ package config
 import (
 	"flag"
 	"os"
-	
+
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
@@ -26,7 +26,6 @@ func (c *serverConfigStruct) GetSecretKey() string   { return c.SecretKey }
 func (c *serverConfigStruct) GetLogLevel() string    { return c.LogLevel }
 func (c *serverConfigStruct) GetDatabaseDSN() string { return c.DatabaseDSN }
 func (c *serverConfigStruct) GetDBConfig() DBConfig  { return c.DB }
-
 
 func NewServerConfig() ServerConfig {
 	cfg := &serverConfigStruct{}

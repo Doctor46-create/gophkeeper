@@ -79,9 +79,9 @@ func (a *ServerApp) Run() error {
 	mux.HandleFunc("/api/register", a.transport.RegisterHandler)
 	mux.HandleFunc("/api/login", a.transport.LoginHandler)
 	mux.Handle("/api/data", transport.AuthMiddleware(
-    a.cfg.GetSecretKey(), 
-    http.HandlerFunc(a.transport.DataHandler),
-))
+		a.cfg.GetSecretKey(),
+		http.HandlerFunc(a.transport.DataHandler),
+	))
 
 	handlerChain := transport.LoggingMiddleware(transport.PanicRecoveryMiddleware(mux))
 

@@ -9,14 +9,14 @@ import (
 )
 
 type MemoryStorage struct {
-	mu sync.RWMutex
-	users map[string]string
+	mu          sync.RWMutex
+	users       map[string]string
 	userSecrets map[string][]domain.Secret
 }
 
 func NewMemoryStorage() *MemoryStorage {
 	return &MemoryStorage{
-		users: make(map[string]string),
+		users:       make(map[string]string),
 		userSecrets: make(map[string][]domain.Secret),
 	}
 }
@@ -25,12 +25,12 @@ func (s *MemoryStorage) Close() error {
 	return nil
 }
 
-func (s *MemoryStorage) RunInTransaction(ctx context.Context, fn func(ctx context.Context) error) error{
+func (s *MemoryStorage) RunInTransaction(ctx context.Context, fn func(ctx context.Context) error) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	select {
-	case <- ctx.Done():
+	case <-ctx.Done():
 		return ctx.Err()
 	default:
 	}
@@ -52,7 +52,7 @@ func (s *MemoryStorage) CreateUser(ctx context.Context, login, hash string) erro
 func (s *MemoryStorage) GetUser(ctx context.Context, login string) (string, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	hash, ok := s.users[login]
 	if !ok {
 		return "", domain.ErrInvalidCreds
@@ -68,23 +68,23 @@ func (s *MemoryStorage) SaveSecrets(ctx context.Context, login string, secrets [
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	now := time.Now()
-	
+
 	existingSecrets := s.userSecrets[login]
-	
-	existingMap := make(map[string]int) 
+
+	existingMap := make(map[string]int)
 	for i, secret := range existingSecrets {
 		existingMap[secret.ID] = i
 	}
-	
+
 	for _, incomingSecret := range secrets {
 		secret := incomingSecret
-		
+
 		secret.UserLogin = login
-		
+
 		secret.UpdatedAt = now
-		
+
 		if idx, exists := existingMap[secret.ID]; exists {
 			secret.CreatedAt = existingSecrets[idx].CreatedAt
 			existingSecrets[idx] = secret
@@ -94,17 +94,17 @@ func (s *MemoryStorage) SaveSecrets(ctx context.Context, login string, secrets [
 			existingMap[secret.ID] = len(existingSecrets) - 1
 		}
 	}
-	
+
 	s.userSecrets[login] = existingSecrets
-	
+
 	return nil
 }
 
-func (s * MemoryStorage) AddData (ctx context.Context, login string, secret domain.Secret) error {
+func (s *MemoryStorage) AddData(ctx context.Context, login string, secret domain.Secret) error {
 	return s.SaveSecrets(ctx, login, []domain.Secret{secret})
 }
 
-func (s * MemoryStorage) GetData (ctx context.Context, login string) ([]domain.Secret, error) {
+func (s *MemoryStorage) GetData(ctx context.Context, login string) ([]domain.Secret, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -116,10 +116,9 @@ func (s * MemoryStorage) GetData (ctx context.Context, login string) ([]domain.S
 
 }
 
-func (s * MemoryStorage) DeleteData(ctx context.Context, login, id string) error {
+func (s *MemoryStorage) DeleteData(ctx context.Context, login, id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
 
 	items := s.userSecrets[login]
 	var newItems []domain.Secret
@@ -127,7 +126,7 @@ func (s * MemoryStorage) DeleteData(ctx context.Context, login, id string) error
 
 	for _, v := range items {
 		if v.ID == id {
-			found = true 
+			found = true
 			continue
 		}
 		newItems = append(newItems, v)

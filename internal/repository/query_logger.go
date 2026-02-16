@@ -5,8 +5,8 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/Doctor46-create/gophkeeper/internal/logger"
+	"github.com/jackc/pgx/v5"
 )
 
 var (
@@ -30,7 +30,7 @@ func (l *SafeQueryLogger) TraceQueryStart(
 	ctx = context.WithValue(ctx, QueryStartTimeKey, time.Now())
 	ctx = context.WithValue(ctx, QuerySQLKey, data.SQL)
 	ctx = context.WithValue(ctx, QueryArgsKey, data.Args)
-	
+
 	return ctx
 }
 
@@ -39,10 +39,10 @@ func (l *SafeQueryLogger) TraceQueryEnd(ctx context.Context, conn *pgx.Conn, dat
 	if !ok {
 		return
 	}
-	
+
 	sql, _ := ctx.Value(QuerySQLKey).(string)
 	args, _ := ctx.Value(QueryArgsKey).([]any)
-	
+
 	duration := time.Since(startTime)
 
 	reqID := "bg-no-req"

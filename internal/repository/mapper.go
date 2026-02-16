@@ -15,9 +15,12 @@ func HandleDBError(err error) error {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		switch pgErr.Code {
-			case "23505": return domain.ErrUserExists
-			case "23503": return domain.ErrSecretNotFound
-			case "40001": return errors.New("serialization conflict")
+		case "23505":
+			return domain.ErrUserExists
+		case "23503":
+			return domain.ErrSecretNotFound
+		case "40001":
+			return errors.New("serialization conflict")
 		}
 	}
 	return err

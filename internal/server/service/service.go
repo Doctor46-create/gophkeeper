@@ -25,7 +25,7 @@ func New(repo repository.Storage, secret string) Service {
 }
 
 func (s *serviceImplementation) Register(ctx context.Context, login, password string) error {
-		return s.repo.CreateUser(ctx, login, s.hashPass(password))
+	return s.repo.CreateUser(ctx, login, s.hashPass(password))
 }
 
 func (s *serviceImplementation) Login(ctx context.Context, login, password string) (string, error) {
@@ -48,17 +48,17 @@ func (s *serviceImplementation) hashPass(p string) string {
 
 func (s *serviceImplementation) SaveSecrets(ctx context.Context, userLogin string, secrets []domain.Secret) error {
 	now := time.Now()
-	
+
 	for i := range secrets {
 		secrets[i].UserLogin = userLogin
-		
+
 		if secrets[i].CreatedAt.IsZero() {
 			secrets[i].CreatedAt = now
 		}
-		
+
 		secrets[i].UpdatedAt = now
 	}
-	
+
 	return s.repo.SaveSecrets(ctx, userLogin, secrets)
 }
 

@@ -7,7 +7,7 @@ import (
 )
 
 type Service interface {
-	Register(ctx context.Context, login, password string) error	
+	Register(ctx context.Context, login, password string) error
 	Login(ctx context.Context, login, password string) (string, error)
 
 	SaveSecrets(ctx context.Context, userLogin string, secrets []domain.Secret) error

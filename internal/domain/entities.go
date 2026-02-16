@@ -8,10 +8,10 @@ type User struct {
 }
 
 type Secret struct {
-	ID        string     `json:"id"`
-	UserLogin string     `json:"user_login"`
-	Type      string     `json:"type"`
-	Data      string     `json:"data"`
+	ID        string    `json:"id"`
+	UserLogin string    `json:"user_login"`
+	Type      string    `json:"type"`
+	Data      string    `json:"data"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

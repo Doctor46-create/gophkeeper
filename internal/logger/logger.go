@@ -15,12 +15,12 @@ func Initialize(level string) error {
 
 	cfg := zap.NewProductionConfig()
 	cfg.Level = zap.NewAtomicLevelAt(lvl)
-	
+
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	cfg.EncoderConfig.TimeKey = "timestamp"
-	
+
 	cfg.DisableStacktrace = true
-	
+
 	zl, err := cfg.Build(
 		zap.AddCaller(),
 	)

@@ -64,14 +64,14 @@ func (h *HTTPTransport) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	tok, err := h.svc.Login(r.Context(), req.Login, req.Password)
 	if err != nil {
-		logger.Log.Warnw("LoginHandler - service failed", 
+		logger.Log.Warnw("LoginHandler - service failed",
 			"error", err.Error(),
 			"login", req.Login,
 		)
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-	logger.Log.Infow("LoginHandler - successful", 
+	logger.Log.Infow("LoginHandler - successful",
 		"login", req.Login,
 		"token_length", len(tok),
 	)

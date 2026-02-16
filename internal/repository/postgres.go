@@ -123,20 +123,20 @@ func (s *PostgresStorage) SaveSecrets(
 			if createdAt.IsZero() {
 				createdAt = time.Now()
 			}
-			
+
 			updatedAt := sec.UpdatedAt
 			if updatedAt.IsZero() {
 				updatedAt = time.Now()
 			}
-			
+
 			batch.Queue(
 				secretUpsert,
 				sec.ID,
 				login,
 				sec.Type,
 				sec.Data,
-				createdAt,  
-				updatedAt,  
+				createdAt,
+				updatedAt,
 			)
 		}
 
