@@ -22,11 +22,10 @@ pub fn run_tui(mut app: TuiApp) -> io::Result<()> {
   while !app.should_quit {
     terminal.draw(|f| ui::draw(f, &app))?;
 
-    if event::poll(Duration::from_millis(100))? {
-      if let CEvent::Key(key) = event::read()? {
+    if event::poll(Duration::from_millis(100))?
+      && let CEvent::Key(key) = event::read()? {
         events::handle_key(&mut app, key);
       }
-    }
 
     app.clear_notifications();
   }

@@ -140,11 +140,10 @@ impl TuiApp {
   }
 
   pub fn clear_notifications(&mut self) {
-    if let Some((_, until)) = &self.notification {
-      if Instant::now() > *until {
+    if let Some((_, until)) = &self.notification
+      && Instant::now() > *until {
         self.notification = None;
       }
-    }
   }
 
   pub fn login(&mut self) {
